@@ -284,32 +284,46 @@ $Script:ProgramCatalog = @(
 )
 
 # Exibe o menu de selecao de programas por categoria
+# Exibe o menu de selecao de programas em 2 colunas com barra de acoes colorida
 function Show-ProgramSelectionMenu {
     param([System.Collections.Generic.HashSet[int]]$Selected)
 
     Show-Header
     Write-Host ""
-    Write-Host "  PROGRAMAS ESSENCIAIS  -  Selecione o que deseja instalar" -ForegroundColor Cyan
+    Write-Host "  PROGRAMAS ESSENCIAIS  -  Selecione os programas desejados" -ForegroundColor Cyan
     Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host "  Digite o numero para (marcar/desmarcar) | [A] Todos | [D] Limpar | [I] Instalar | [0] Voltar" -ForegroundColor DarkGray
     Write-Host ""
 
-    $currentCategory = ""
-    foreach ($prog in $Script:ProgramCatalog) {
-        # Cabecalho de categoria
-        if ($prog.Category -ne $currentCategory) {
-            $currentCategory = $prog.Category
-            Write-Host "    --- $currentCategory ---" -ForegroundColor Magenta
+    # Exibe a lista em 2 colunas lado a lado (11 linhas)
+    for ($i = 0; $i -lt $Script:ProgramCatalog.Count; $i += 2) {
+        $left  = $Script:ProgramCatalog[$i]
+        $right = if (($i + 1) -lt $Script:ProgramCatalog.Count) { $Script:ProgramCatalog[$i+1] } else { $null }
+
+        # --- COLUNA ESQUERDA ---
+        $isSelL = $Selected.Contains($left.Id)
+        $boxL   = if ($isSelL) { "[X]" } else { "[ ]" }
+        $colorL = if ($isSelL) { "Green" } else { "White" }
+        $idL    = $left.Id.ToString().PadLeft(2)
+        $nameL  = $left.Name.PadRight(22)
+
+        Write-Host "    $boxL " -NoNewline -ForegroundColor $colorL
+        Write-Host "($idL)"    -NoNewline -ForegroundColor DarkGray
+        Write-Host " $nameL"   -NoNewline -ForegroundColor $colorL
+
+        # --- COLUNA DIREITA ---
+        if ($right) {
+            $isSelR = $Selected.Contains($right.Id)
+            $boxR   = if ($isSelR) { "[X]" } else { "[ ]" }
+            $colorR = if ($isSelR) { "Green" } else { "White" }
+            $idR    = $right.Id.ToString().PadLeft(2)
+            $nameR  = $right.Name.PadRight(22)
+
+            Write-Host "   $boxR " -NoNewline -ForegroundColor $colorR
+            Write-Host "($idR)"    -NoNewline -ForegroundColor DarkGray
+            Write-Host " $nameR"   -ForegroundColor $colorR
+        } else {
+            Write-Host ""
         }
-
-        $isSelected = $Selected.Contains($prog.Id)
-        $checkbox   = if ($isSelected) { "[X]" } else { "[ ]" }
-        $color      = if ($isSelected) { "Green" } else { "White" }
-        $idPadded   = $prog.Id.ToString().PadLeft(2)
-
-        Write-Host "    $checkbox " -NoNewline -ForegroundColor $color
-        Write-Host "($idPadded)" -NoNewline -ForegroundColor DarkGray
-        Write-Host " $($prog.Name)" -ForegroundColor $color
     }
 
     Write-Host ""
@@ -317,10 +331,25 @@ function Show-ProgramSelectionMenu {
 
     $selCount = $Selected.Count
     if ($selCount -gt 0) {
-        Write-Host "  $selCount programa(s) selecionado(s). Digite [I] para instalar." -ForegroundColor Yellow
+        Write-Host "  $selCount programa(s) selecionado(s)." -ForegroundColor Yellow
     } else {
         Write-Host "  Nenhum programa selecionado." -ForegroundColor DarkGray
     }
+    Write-Host ""
+
+    # ---- Barra de navegacao colorida ----
+    Write-Host "  " -NoNewline
+    Write-Host " NUM " -NoNewline -BackgroundColor DarkCyan    -ForegroundColor Black
+    Write-Host " Marcar/Desmarcar   " -NoNewline -ForegroundColor Cyan
+    Write-Host " A " -NoNewline -BackgroundColor DarkYellow  -ForegroundColor Black
+    Write-Host " Todos   " -NoNewline -ForegroundColor Yellow
+    Write-Host " D " -NoNewline -BackgroundColor DarkGreen   -ForegroundColor Black
+    Write-Host " Limpar" -ForegroundColor Green
+    Write-Host "  " -NoNewline
+    Write-Host " I " -NoNewline -BackgroundColor DarkMagenta -ForegroundColor White
+    Write-Host " Instalar Selecionados   " -NoNewline -ForegroundColor Magenta
+    Write-Host " 0 " -NoNewline -BackgroundColor DarkRed     -ForegroundColor White
+    Write-Host " Voltar" -ForegroundColor Red
     Write-Host ""
 }
 
