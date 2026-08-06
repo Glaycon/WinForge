@@ -21,6 +21,23 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Ajusta o tamanho da janela do console para exibir o menu sem rolagem nem quebras
+try {
+    if ($Host.Name -eq "ConsoleHost") {
+        $rawUI = $Host.UI.RawUI
+        $rawUI.WindowTitle = "POS-FORMATACAO AUTOMATICA - Glaycon Oliveira"
+        $buf = $rawUI.BufferSize
+        if ($buf.Width -lt 90)   { $buf.Width = 90 }
+        if ($buf.Height -lt 300) { $buf.Height = 300 }
+        $rawUI.BufferSize = $buf
+
+        $win = $rawUI.WindowSize
+        if ($win.Width -lt 90)  { $win.Width = 90 }
+        if ($win.Height -lt 42) { $win.Height = 42 }
+        $rawUI.WindowSize = $win
+    }
+} catch { }
+
 # Politica de execucao temporaria para a sessao atual
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
@@ -308,13 +325,20 @@ function Show-ProgramSelectionMenu {
 
     Show-Header
     Write-Host ""
-    Write-Host "  PROGRAMAS ESSENCIAIS  -  Selecione os programas desejados" -ForegroundColor Cyan
-    Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "  PROGRAMAS ESSENCIAIS  -  Selecione os programas desejados para instalacao" -ForegroundColor Cyan
+    Write-Host "  =======================================================================================" -ForegroundColor DarkGray
 
-    # Agrupa por categoria e exibe cada grupo em 2 colunas
+    # Agrupa por categoria e exibe cada grupo em 2 colunas perfeitamente alinhadas
     $grouped = $Script:ProgramCatalog | Group-Object Category
     foreach ($group in $grouped) {
-        Write-Host "  --- $($group.Name) ---" -ForegroundColor Magenta
+        $catName = " $($(([string]$group.Name).Trim())) "
+        $padLen  = [math]::Max(0, 83 - $catName.Length - 2)
+        $line    = [string]::new([char]0x2500, $padLen)  # linha horizontal ─
+
+        Write-Host "  " -NoNewline
+        Write-Host $catName -NoNewline -ForegroundColor Magenta
+        Write-Host $line -ForegroundColor DarkGray
+
         $items = $group.Group
         for ($i = 0; $i -lt $items.Count; $i += 2) {
             $left  = $items[$i]
@@ -325,7 +349,7 @@ function Show-ProgramSelectionMenu {
             $boxL   = if ($isSelL) { "[X]" } else { "[ ]" }
             $colorL = if ($isSelL) { "Green" } else { "White" }
             $idL    = $left.Id.ToString().PadLeft(2)
-            $nameL  = $left.Name.PadRight(25)
+            $nameL  = $left.Name.PadRight(28)
 
             Write-Host "    $boxL " -NoNewline -ForegroundColor $colorL
             Write-Host "($idL)"    -NoNewline -ForegroundColor DarkGray
@@ -337,9 +361,9 @@ function Show-ProgramSelectionMenu {
                 $boxR   = if ($isSelR) { "[X]" } else { "[ ]" }
                 $colorR = if ($isSelR) { "Green" } else { "White" }
                 $idR    = $right.Id.ToString().PadLeft(2)
-                $nameR  = $right.Name.PadRight(25)
+                $nameR  = $right.Name.PadRight(28)
 
-                Write-Host "   $boxR " -NoNewline -ForegroundColor $colorR
+                Write-Host "    $boxR " -NoNewline -ForegroundColor $colorR
                 Write-Host "($idR)"    -NoNewline -ForegroundColor DarkGray
                 Write-Host " $nameR"   -ForegroundColor $colorR
             } else {
@@ -348,27 +372,26 @@ function Show-ProgramSelectionMenu {
         }
     }
 
-    Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "  =======================================================================================" -ForegroundColor DarkGray
 
     $selCount = $Selected.Count
     if ($selCount -gt 0) {
-        Write-Host "  $selCount programa(s) selecionado(s)." -ForegroundColor Yellow
+        Write-Host "  >> $selCount programa(s) selecionado(s)." -ForegroundColor Yellow
     } else {
-        Write-Host "  Nenhum programa selecionado." -ForegroundColor DarkGray
+        Write-Host "  >> Nenhum programa selecionado." -ForegroundColor DarkGray
     }
     Write-Host ""
 
-    # ---- Barra de navegacao colorida ----
+    # ---- Barra de navegacao colorida (1 linha compacta perfeitamente alinhada) ----
     Write-Host "  " -NoNewline
     Write-Host " NUM " -NoNewline -BackgroundColor DarkCyan    -ForegroundColor Black
-    Write-Host " Marcar/Desmarcar   " -NoNewline -ForegroundColor Cyan
+    Write-Host " Marcar/Desmarcar  " -NoNewline -ForegroundColor Cyan
     Write-Host " A " -NoNewline -BackgroundColor DarkYellow  -ForegroundColor Black
-    Write-Host " Todos   " -NoNewline -ForegroundColor Yellow
+    Write-Host " Todos  " -NoNewline -ForegroundColor Yellow
     Write-Host " D " -NoNewline -BackgroundColor DarkGreen   -ForegroundColor Black
-    Write-Host " Limpar" -ForegroundColor Green
-    Write-Host "  " -NoNewline
+    Write-Host " Limpar  " -NoNewline -ForegroundColor Green
     Write-Host " I " -NoNewline -BackgroundColor DarkMagenta -ForegroundColor White
-    Write-Host " Instalar Selecionados   " -NoNewline -ForegroundColor Magenta
+    Write-Host " Instalar Selecionados  " -NoNewline -ForegroundColor Magenta
     Write-Host " 0 " -NoNewline -BackgroundColor DarkRed     -ForegroundColor White
     Write-Host " Voltar" -ForegroundColor Red
     Write-Host ""
