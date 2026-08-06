@@ -1,5 +1,5 @@
 @echo off
-title POS-FORMATACAO - Launcher
+title WinForge - Launcher
 
 :: -------------------------------------------------------
 :: AUTO-ELEVACAO: relanca como Administrador se necessario
@@ -19,14 +19,14 @@ cls
 
 echo.
 echo  ======================================================================
-echo               POS-FORMATACAO AUTOMATICA - LAUNCHER
-echo               Desenvolvido por Glaycon Oliveira
+echo                 WINFORGE  -  POS-FORMATACAO AUTOMATICA
+echo                    Desenvolvido por Glaycon Oliveira
 echo  ======================================================================
 echo.
 echo  Iniciando o script PowerShell...
 echo.
 
-powershell.exe -ExecutionPolicy Bypass -NoProfile -File "%~dp0PosFormatacao.ps1"
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "%~dp0WinForge.ps1"
 
 echo.
 echo  Script encerrado. Pressione qualquer tecla para fechar.

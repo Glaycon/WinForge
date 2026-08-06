@@ -68,7 +68,7 @@ function Show-Header {
     Clear-Host
     Write-Host ""
     Write-Host "  ======================================================================" -ForegroundColor Cyan
-    Write-Host "                      POS-FORMATACAO AUTOMATICA" -ForegroundColor Yellow
+    Write-Host "                                 WINFORGE" -ForegroundColor Yellow
     Write-Host "                   Desenvolvido por Glaycon Oliveira" -ForegroundColor DarkYellow
     Write-Host "                    https://glaycon.github.io" -ForegroundColor DarkCyan
     Write-Host "  ======================================================================" -ForegroundColor Cyan
@@ -94,6 +94,7 @@ function Show-Menu {
     Write-Host "    [9]  Otimizacao de Rede (DNS Cloudflare + Flush DNS)" -ForegroundColor White
     Write-Host "    [10] Extras (Menu Classico Win11, Extensoes/Ocultos)" -ForegroundColor White
     Write-Host "    [11] Desinstalar Programas (busca + remove arquivos residuais)" -ForegroundColor White
+    Write-Host "    [12] Criar Atalho na Area de Trabalho (Fixar no PC)" -ForegroundColor White
     Write-Host ""
     Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
     Write-Host "    [88] Visitar GitHub (https://glaycon.github.io)" -ForegroundColor Green
@@ -1243,6 +1244,62 @@ function Uninstall-AnyProgram {
 }
 
 # ============================================================
+#  OPCAO [12] - CRIAR ATALHO NA AREA DE TRABALHO
+# ============================================================
+function Create-DesktopShortcut {
+    Show-Section "CRIAR ATALHO NA AREA DE TRABALHO"
+
+    $targetDir = "$env:ProgramData\WinForge"
+    if (-not (Test-Path $targetDir)) { New-Item -ItemType Directory -Path $targetDir -Force | Out-Null }
+
+    # Copia o script atual para o diretorio permanente
+    $scriptSource = $MyInvocation.MyCommand.Path
+    if ($scriptSource -and (Test-Path $scriptSource)) {
+        Copy-Item -Path $scriptSource -Destination "$targetDir\WinForge.ps1" -Force
+        Write-Host "  [OK] Script copiado para $targetDir\WinForge.ps1" -ForegroundColor Green
+    } else {
+        # Se executado via iex/irm, baixa a versao mais recente do GitHub
+        Write-Host "  Baixando versao permanente do GitHub..." -ForegroundColor Yellow
+        try {
+            Invoke-WebRequest -Uri "https://raw.githubusercontent.com/glaycon/WinForge/main/WinForge.ps1" `
+                -OutFile "$targetDir\WinForge.ps1" -UseBasicParsing -ErrorAction Stop
+            Write-Host "  [OK] Script baixado para $targetDir\WinForge.ps1" -ForegroundColor Green
+        } catch {
+            Write-Host "  [AVISO] Nao foi possivel baixar o script permanente: $($_.Exception.Message)" -ForegroundColor DarkYellow
+        }
+    }
+
+    # Cria o atalho no Desktop
+    $desktopPath  = [Environment]::GetFolderPath("Desktop")
+    $shortcutPath = "$desktopPath\WinForge.lnk"
+
+    try {
+        $wshShell = New-Object -ComObject WScript.Shell
+        $shortcut = $wshShell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath       = "powershell.exe"
+        $shortcut.Arguments        = "-ExecutionPolicy Bypass -NoProfile -File `"$targetDir\WinForge.ps1`""
+        $shortcut.WorkingDirectory = $targetDir
+        $shortcut.Description      = "WinForge - Pos-Formatacao Automatica para Windows 10/11"
+        $shortcut.IconLocation     = "$env:SystemRoot\System32\shell32.dll,15"
+        $shortcut.Save()
+
+        # Define flag para rodar como Administrador (Byte 21 = 0x20)
+        $bytes = [System.IO.File]::ReadAllBytes($shortcutPath)
+        $bytes[21] = $bytes[21] -bor 0x20
+        [System.IO.File]::WriteAllBytes($shortcutPath, $bytes)
+
+        Write-Host ""
+        Write-Host "  ============================================================" -ForegroundColor Cyan
+        Write-Host "  [CONCLUIDO] Atalho 'WinForge' criado na Area de Trabalho!" -ForegroundColor Green
+        Write-Host "  [PATH] $shortcutPath" -ForegroundColor DarkGray
+        Write-Host "  ============================================================" -ForegroundColor Cyan
+    }
+    catch {
+        Write-Host "  [ERRO] Nao foi possivel criar o atalho: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+# ============================================================
 #  OPCAO [88] - ABRIR GITHUB
 # ============================================================
 function Open-GitHub {
@@ -1277,6 +1334,7 @@ function Start-MainMenu {
             "9"  { Optimize-Network;             Pause-AndReturn }
             "10" { Apply-Extras;                 Pause-AndReturn }
             "11" { Uninstall-AnyProgram }
+            "12" { Create-DesktopShortcut;       Pause-AndReturn }
             "88" { Open-GitHub;                  Pause-AndReturn }
             "0"  {
                 Show-Header
