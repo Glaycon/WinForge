@@ -952,9 +952,11 @@ function Uninstall-AnyProgram {
                     Write-Host "  Programa : " -NoNewline -ForegroundColor White
                     Write-Host $chosen.DisplayName -ForegroundColor Yellow
                     Write-Host "  Versao   : " -NoNewline -ForegroundColor White
-                    Write-Host (if ($chosen.DisplayVersion) { $chosen.DisplayVersion } else { 'desconhecida' }) -ForegroundColor DarkGray
+                    $verLabel = if ($chosen.DisplayVersion) { $chosen.DisplayVersion } else { 'desconhecida' }
+                    $pubLabel = if ($chosen.Publisher)      { $chosen.Publisher }      else { 'desconhecido'  }
+                    Write-Host $verLabel -ForegroundColor DarkGray
                     Write-Host "  Editor   : " -NoNewline -ForegroundColor White
-                    Write-Host (if ($chosen.Publisher) { $chosen.Publisher } else { 'desconhecido' }) -ForegroundColor DarkGray
+                    Write-Host $pubLabel -ForegroundColor DarkGray
                     Write-Host ""
                     Write-Host "  [!] Isso ira desinstalar o programa E remover arquivos residuais." -ForegroundColor Red
                     Write-Host ""
