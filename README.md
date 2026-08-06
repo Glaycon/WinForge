@@ -12,12 +12,12 @@
 Abra o **PowerShell como Administrador** e execute:
 
 ```powershell
-irm tinyurl.com/winforge-ps | iex
+irm is.gd/wforge | iex
 ```
 
 ### Método 2 — CMD como Administrador
 ```cmd
-powershell -ExecutionPolicy Bypass -Command "irm tinyurl.com/winforge-ps | iex"
+powershell -ExecutionPolicy Bypass -Command "irm is.gd/wforge | iex"
 ```
 
 ### Método 3 — URL Direta do GitHub
