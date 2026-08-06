@@ -803,19 +803,75 @@ function Uninstall-AnyProgram {
 
     # Coleta todos os programas instalados via registro (muito mais rapido que winget list)
     function Get-InstalledApps {
+        # --- Cache de Prefetch: monta hashtable nome_exe -> LastWriteTime ---
+        # Assim so percorre a pasta uma vez para todos os apps (rapido)
+        $prefetchCache = @{}
+        $pfDir = 'C:\Windows\Prefetch'
+        if (Test-Path $pfDir) {
+            Get-ChildItem $pfDir -Filter '*.pf' -ErrorAction SilentlyContinue | ForEach-Object {
+                # Nome do .pf: PROGRAMA-HASH.pf  -> pega so a parte do nome
+                $exeKey = ($_.Name -split '-')[0].ToUpper()
+                # Guarda o mais recente se houver multiplas entradas
+                if (-not $prefetchCache.ContainsKey($exeKey) -or
+                    $_.LastWriteTime -gt $prefetchCache[$exeKey]) {
+                    $prefetchCache[$exeKey] = $_.LastWriteTime
+                }
+            }
+        }
+
         $paths = @(
             'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
             'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
             'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
         )
+
         $apps = foreach ($path in $paths) {
             Get-ItemProperty $path -ErrorAction SilentlyContinue |
                 Where-Object { $_.DisplayName -and $_.DisplayName.Trim() -ne '' } |
-                Select-Object DisplayName, DisplayVersion, Publisher,
-                              UninstallString, QuietUninstallString,
-                              @{N='WingetId'; E={ $null }}
+                ForEach-Object {
+                    $reg = $_
+
+                    # --- Data de instalacao (registro: formato YYYYMMDD) ---
+                    $instLabel = '--/--/----'
+                    if ($reg.InstallDate -match '^\d{8}$') {
+                        $d = $reg.InstallDate
+                        $instLabel = "$($d.Substring(6,2))/$($d.Substring(4,2))/$($d.Substring(0,4))"
+                    }
+
+                    # --- Ultima vez usado (Prefetch) ---
+                    # Tenta extrair o nome do .exe a partir do icone ou local de instalacao
+                    $lastLabel = '--/--/----'
+                    $exeGuess  = ''
+
+                    if ($reg.DisplayIcon) {
+                        # DisplayIcon pode ser  "C:\path\app.exe,0"  ou so o caminho
+                        $iconPath = ($reg.DisplayIcon -split ',')[0].Trim('"')
+                        $exeGuess = [System.IO.Path]::GetFileNameWithoutExtension($iconPath).ToUpper()
+                    }
+                    if (-not $exeGuess -and $reg.InstallLocation) {
+                        # Tenta o primeiro .exe da pasta de instalacao
+                        $exe = Get-ChildItem $reg.InstallLocation -Filter '*.exe' `
+                               -ErrorAction SilentlyContinue | Select-Object -First 1
+                        if ($exe) { $exeGuess = $exe.BaseName.ToUpper() }
+                    }
+
+                    if ($exeGuess -and $prefetchCache.ContainsKey($exeGuess)) {
+                        $lastLabel = $prefetchCache[$exeGuess].ToString('dd/MM/yyyy')
+                    }
+
+                    [PSCustomObject]@{
+                        DisplayName          = $reg.DisplayName
+                        DisplayVersion       = $reg.DisplayVersion
+                        Publisher            = $reg.Publisher
+                        InstallDate          = $instLabel
+                        LastUsed             = $lastLabel
+                        UninstallString      = $reg.UninstallString
+                        QuietUninstallString = $reg.QuietUninstallString
+                    }
+                }
         }
-        # Remove duplicatas pelo nome
+
+        # Remove duplicatas pelo nome, ordena
         $apps | Sort-Object DisplayName -Unique
     }
 
@@ -845,11 +901,21 @@ function Uninstall-AnyProgram {
 
         $idx = $start + 1
         foreach ($app in $slice) {
-            $numLabel = "[$idx]".PadRight(5)
-            $ver      = if ($app.DisplayVersion) { "v$($app.DisplayVersion)" } else { '' }
+            $numLabel  = "[$idx]".PadRight(5)
+            $nameShort = $app.DisplayName
+            if ($nameShort.Length -gt 34) { $nameShort = $nameShort.Substring(0,31) + '...' }
+            $nameCol   = $nameShort.PadRight(34)
+            $ver       = if ($app.DisplayVersion) { $app.DisplayVersion.PadRight(12) } else { ''.PadRight(12) }
+
             Write-Host "  $numLabel " -NoNewline -ForegroundColor Cyan
-            Write-Host $app.DisplayName.PadRight(42).Substring(0, [math]::Min(42, $app.DisplayName.Length)).PadRight(42) -NoNewline -ForegroundColor White
-            Write-Host " $ver" -ForegroundColor DarkGray
+            Write-Host $nameCol     -NoNewline -ForegroundColor White
+            Write-Host $ver         -NoNewline -ForegroundColor DarkGray
+            Write-Host ' Inst:' -NoNewline -ForegroundColor DarkGray
+            $instColor = if ($app.InstallDate -ne '--/--/----') { 'Yellow' } else { 'DarkGray' }
+            $useColor  = if ($app.LastUsed    -ne '--/--/----') { 'Cyan'   } else { 'DarkGray' }
+            Write-Host $app.InstallDate -NoNewline -ForegroundColor $instColor
+            Write-Host '  Uso:' -NoNewline -ForegroundColor DarkGray
+            Write-Host $app.LastUsed   -ForegroundColor $useColor
             $idx++
         }
 
@@ -957,6 +1023,18 @@ function Uninstall-AnyProgram {
                     Write-Host $verLabel -ForegroundColor DarkGray
                     Write-Host "  Editor   : " -NoNewline -ForegroundColor White
                     Write-Host $pubLabel -ForegroundColor DarkGray
+                    Write-Host "  Instalado: " -NoNewline -ForegroundColor White
+                    if ($chosen.InstallDate -ne '--/--/----') {
+                        Write-Host $chosen.InstallDate -ForegroundColor Yellow
+                    } else {
+                        Write-Host 'data nao disponivel' -ForegroundColor DarkGray
+                    }
+                    Write-Host "  Ult. uso : " -NoNewline -ForegroundColor White
+                    if ($chosen.LastUsed -ne '--/--/----') {
+                        Write-Host $chosen.LastUsed -ForegroundColor Cyan
+                    } else {
+                        Write-Host 'sem registro de uso' -ForegroundColor DarkGray
+                    }
                     Write-Host ""
                     Write-Host "  [!] Isso ira desinstalar o programa E remover arquivos residuais." -ForegroundColor Red
                     Write-Host ""
