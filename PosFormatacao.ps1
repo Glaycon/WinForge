@@ -949,18 +949,16 @@ function Uninstall-AnyProgram {
         $apps | Sort-Object DisplayName -Unique
     }
 
-    # Desenha a tabela de resultados
+    # Desenha a tabela de resultados (exibe todos os programas sem paginacao)
     function Show-AppList {
         param(
             [array]$Apps,
-            [string]$Filter,
-            [int]$Page,
-            [int]$PageSize
+            [string]$Filter
         )
         Show-Header
         Write-Host ""
         Write-Host "  DESINSTALAR PROGRAMAS" -ForegroundColor Red
-        Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
+        Write-Host "  =======================================================================================" -ForegroundColor DarkGray
         Write-Host "  Filtro atual: " -NoNewline -ForegroundColor DarkGray
         if ($Filter) {
             Write-Host "'$Filter'" -ForegroundColor Yellow
@@ -969,24 +967,21 @@ function Uninstall-AnyProgram {
         }
         Write-Host ""
 
-        $totalPages = [math]::Ceiling($Apps.Count / $PageSize)
-        $start = $Page * $PageSize
-        $slice = $Apps | Select-Object -Skip $start -First $PageSize
-
-        $idx = $start + 1
-        foreach ($app in $slice) {
+        $idx = 1
+        foreach ($app in $Apps) {
             $numLabel  = "[$idx]".PadRight(5)
             $nameShort = $app.DisplayName
             if ($nameShort.Length -gt 34) { $nameShort = $nameShort.Substring(0,31) + '...' }
             $nameCol   = $nameShort.PadRight(34)
             $ver       = if ($app.DisplayVersion) { $app.DisplayVersion.PadRight(12) } else { ''.PadRight(12) }
 
+            $instColor = if ($app.InstallDate -ne '--/--/----') { 'Yellow' } else { 'DarkGray' }
+            $useColor  = if ($app.LastUsed    -ne '--/--/----') { 'Cyan'   } else { 'DarkGray' }
+
             Write-Host "  $numLabel " -NoNewline -ForegroundColor Cyan
             Write-Host $nameCol     -NoNewline -ForegroundColor White
             Write-Host $ver         -NoNewline -ForegroundColor DarkGray
             Write-Host ' Inst:' -NoNewline -ForegroundColor DarkGray
-            $instColor = if ($app.InstallDate -ne '--/--/----') { 'Yellow' } else { 'DarkGray' }
-            $useColor  = if ($app.LastUsed    -ne '--/--/----') { 'Cyan'   } else { 'DarkGray' }
             Write-Host $app.InstallDate -NoNewline -ForegroundColor $instColor
             Write-Host '  Uso:' -NoNewline -ForegroundColor DarkGray
             Write-Host $app.LastUsed   -ForegroundColor $useColor
@@ -994,28 +989,20 @@ function Uninstall-AnyProgram {
         }
 
         Write-Host ""
-
-        # ---- Barra de navegacao colorida ----
-        $pg = "  Pagina $($Page+1)/$totalPages"
-        $ct = "$($Apps.Count) programa(s)"
-        Write-Host "$pg" -NoNewline -ForegroundColor DarkGray
-        Write-Host "  |  " -NoNewline -ForegroundColor DarkGray
-        Write-Host $ct -ForegroundColor White
+        Write-Host "  =======================================================================================" -ForegroundColor DarkGray
+        Write-Host "  Total: $($Apps.Count) programa(s) encontrado(s)" -ForegroundColor White
         Write-Host ""
+
+        # ---- Barra de navegacao colorida (sem paginacao) ----
         Write-Host "  " -NoNewline
         Write-Host " NUM " -NoNewline -BackgroundColor DarkCyan    -ForegroundColor Black
-        Write-Host " Selecionar   " -NoNewline -ForegroundColor Cyan
+        Write-Host " Selecionar  " -NoNewline -ForegroundColor Cyan
         Write-Host " F " -NoNewline -BackgroundColor DarkYellow  -ForegroundColor Black
-        Write-Host " Filtrar   " -NoNewline -ForegroundColor Yellow
+        Write-Host " Filtrar por nome  " -NoNewline -ForegroundColor Yellow
         Write-Host " L " -NoNewline -BackgroundColor DarkGreen   -ForegroundColor Black
-        Write-Host " Limpar filtro" -ForegroundColor Green
-        Write-Host "  " -NoNewline
-        Write-Host " N " -NoNewline -BackgroundColor DarkMagenta -ForegroundColor White
-        Write-Host " Proxima pag  " -NoNewline -ForegroundColor Magenta
-        Write-Host " P " -NoNewline -BackgroundColor DarkMagenta -ForegroundColor White
-        Write-Host " Pag anterior " -NoNewline -ForegroundColor Magenta
+        Write-Host " Limpar filtro  " -NoNewline -ForegroundColor Green
         Write-Host " 0 " -NoNewline -BackgroundColor DarkRed     -ForegroundColor White
-        Write-Host " Voltar" -ForegroundColor Red
+        Write-Host " Voltar ao Menu" -ForegroundColor Red
         Write-Host ""
     }
 
@@ -1056,10 +1043,8 @@ function Uninstall-AnyProgram {
     }
 
     # ---- Estado do loop ----
-    $filter   = ''
-    $page     = 0
-    $pageSize = 15
-    $allApps  = @()
+    $filter  = ''
+    $allApps = @()
 
     Write-Host ""
     Write-Host "  Carregando lista de programas instalados..." -ForegroundColor DarkGray
@@ -1073,10 +1058,7 @@ function Uninstall-AnyProgram {
             $allApps
         }
 
-        $totalPages = [math]::Max(1, [math]::Ceiling($filtered.Count / $pageSize))
-        if ($page -ge $totalPages) { $page = $totalPages - 1 }
-
-        Show-AppList -Apps $filtered -Filter $filter -Page $page -PageSize $pageSize
+        Show-AppList -Apps $filtered -Filter $filter
 
         $input = (Read-Host '  Opcao').Trim().ToUpper()
 
@@ -1086,14 +1068,9 @@ function Uninstall-AnyProgram {
             'F' {
                 Write-Host '  Digite parte do nome para filtrar: ' -NoNewline -ForegroundColor Yellow
                 $filter = (Read-Host '').Trim()
-                $page   = 0
             }
 
-            'L' { $filter = ''; $page = 0 }
-
-            'N' { if ($page -lt $totalPages - 1) { $page++ } }
-
-            'P' { if ($page -gt 0) { $page-- } }
+            'L' { $filter = '' }
 
             default {
                 $num = 0
