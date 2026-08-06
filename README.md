@@ -12,17 +12,17 @@
 Abra o **PowerShell como Administrador** e execute:
 
 ```powershell
-irm is.gd/winforge | iex
+irm s.id/wforge | iex
 ```
 
-### Método 2 — URL Direta do GitHub
+### Método 2 — CMD como Administrador
+```cmd
+powershell -ExecutionPolicy Bypass -Command "irm s.id/wforge | iex"
+```
+
+### Método 3 — URL Direta do GitHub
 ```powershell
 irm https://raw.githubusercontent.com/glaycon/WinForge/main/install.ps1 | iex
-```
-
-### Método 3 — CMD como Administrador
-```cmd
-powershell -ExecutionPolicy Bypass -Command "irm is.gd/winforge | iex"
 ```
 
 ---
