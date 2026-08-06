@@ -92,6 +92,7 @@ function Pause-AndReturn {
 }
 
 # Instala um pacote via Winget com tratamento de erro
+# Instala um pacote via Winget (chamada simples, sem barra — usada pelos perfis)
 function Install-WithWinget {
     param(
         [string]$PackageId,
@@ -99,23 +100,80 @@ function Install-WithWinget {
     )
     Write-Host "  >> Instalando: $PackageName..." -ForegroundColor Yellow
     try {
-        $result = winget install --id $PackageId `
-            --silent `
-            --accept-source-agreements `
-            --accept-package-agreements `
-            --disable-interactivity `
-            2>&1
+        $proc = Start-Process winget -ArgumentList (
+            "install --id $PackageId " +
+            "--silent --accept-source-agreements " +
+            "--accept-package-agreements --disable-interactivity"
+        ) -PassThru -WindowStyle Hidden -ErrorAction Stop
 
-        # Verifica codigo de saida do winget
-        if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq -1978335189) {
-            # -1978335189 = ja instalado (No applicable upgrade found)
-            Write-Host "  [OK] $PackageName instalado/atualizado com sucesso." -ForegroundColor Green
+        $proc.WaitForExit()
+
+        if ($proc.ExitCode -eq 0 -or $proc.ExitCode -eq -1978335189) {
+            Write-Host "  [OK] $PackageName instalado com sucesso." -ForegroundColor Green
         } else {
-            Write-Host "  [AVISO] $PackageName pode nao ter sido instalado corretamente. Codigo: $LASTEXITCODE" -ForegroundColor DarkYellow
+            Write-Host "  [AVISO] $PackageName - Codigo: $($proc.ExitCode)" -ForegroundColor DarkYellow
         }
     }
     catch {
         Write-Host "  [ERRO] Falha ao instalar $PackageName : $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+# Instala com barra de progresso animada (usada em Programas Essenciais)
+function Install-WithProgress {
+    param(
+        [string]$PackageId,
+        [string]$PackageName
+    )
+
+    $barLen   = 32
+    $spinners = [char[]]@(0x2596, 0x2598, 0x259D, 0x2597)  # blocos unicode
+    $alt      = @('|', '/', '-', '\')                        # fallback ASCII
+    $i        = 0
+
+    # Inicia winget em segundo plano (janela oculta)
+    try {
+        $proc = Start-Process winget -ArgumentList (
+            "install --id $PackageId " +
+            "--silent --accept-source-agreements " +
+            "--accept-package-agreements --disable-interactivity"
+        ) -PassThru -WindowStyle Hidden -ErrorAction Stop
+    }
+    catch {
+        Write-Host "  [ERRO] Nao foi possivel iniciar o instalador de $PackageName" -ForegroundColor Red
+        return
+    }
+
+    # Animacao enquanto o processo roda
+    while (-not $proc.HasExited) {
+        $spin    = $alt[$i % 4]
+        # Barra "bounce": preenchimento que vai e volta
+        $phase   = $i % ($barLen * 2)
+        $filled  = if ($phase -lt $barLen) { $phase } else { $barLen * 2 - $phase }
+        $bar     = [string]::new([char]0x2588, $filled) + [string]::new([char]0x2591, ($barLen - $filled))
+
+        Write-Host "`r  $spin [" -NoNewline -ForegroundColor DarkGray
+        Write-Host $bar -NoNewline -ForegroundColor Cyan
+        Write-Host "]  $PackageName " -NoNewline -ForegroundColor Yellow
+        Start-Sleep -Milliseconds 80
+        $i++
+    }
+
+    # Limpa a linha e mostra resultado final
+    $emptyLine = " " * ($barLen + $PackageName.Length + 20)
+    Write-Host "`r$emptyLine" -NoNewline
+
+    if ($proc.ExitCode -eq 0 -or $proc.ExitCode -eq -1978335189) {
+        $okBar = [string]::new([char]0x2588, $barLen)
+        Write-Host "`r  [OK] [" -NoNewline -ForegroundColor DarkGray
+        Write-Host $okBar -NoNewline -ForegroundColor Green
+        Write-Host "]  $PackageName" -ForegroundColor Green
+    }
+    else {
+        $errBar = [string]::new([char]0x2591, $barLen)
+        Write-Host "`r  [!!] [" -NoNewline -ForegroundColor DarkGray
+        Write-Host $errBar -NoNewline -ForegroundColor Red
+        Write-Host "]  $PackageName (cod: $($proc.ExitCode))" -ForegroundColor Red
     }
 }
 
@@ -130,21 +188,162 @@ function Show-Section {
 }
 
 # ============================================================
-#  OPCAO [1] - PROGRAMAS ESSENCIAIS
+#  CATALOGO DE PROGRAMAS ESSENCIAIS (por categoria)
+# ============================================================
+$Script:ProgramCatalog = @(
+    # --- NAVEGADORES ---
+    [PSCustomObject]@{ Id=1;  Category="NAVEGADORES";      Name="Google Chrome";      WingetId="Google.Chrome"                }
+    [PSCustomObject]@{ Id=2;  Category="NAVEGADORES";      Name="Mozilla Firefox";    WingetId="Mozilla.Firefox"              }
+    [PSCustomObject]@{ Id=3;  Category="NAVEGADORES";      Name="Brave Browser";      WingetId="Brave.Brave"                  }
+    [PSCustomObject]@{ Id=4;  Category="NAVEGADORES";      Name="Opera GX";           WingetId="Opera.OperaGX"                }
+    # --- PDF & LEITURA ---
+    [PSCustomObject]@{ Id=5;  Category="PDF & LEITURA";    Name="Foxit PDF Reader";   WingetId="Foxit.FoxitReader"            }
+    [PSCustomObject]@{ Id=6;  Category="PDF & LEITURA";    Name="Adobe Acrobat Rdr";  WingetId="Adobe.Acrobat.Reader.64-bit" }
+    [PSCustomObject]@{ Id=7;  Category="PDF & LEITURA";    Name="Sumatra PDF";        WingetId="SumatraPDF.SumatraPDF"       }
+    # --- COMPACTADORES ---
+    [PSCustomObject]@{ Id=8;  Category="COMPACTADORES";    Name="7-Zip";              WingetId="7zip.7zip"                    }
+    [PSCustomObject]@{ Id=9;  Category="COMPACTADORES";    Name="WinRAR";             WingetId="RARLab.WinRAR"                }
+    [PSCustomObject]@{ Id=10; Category="COMPACTADORES";    Name="PeaZip";             WingetId="Giorgiotani.Peazip"           }
+    # --- MIDIA ---
+    [PSCustomObject]@{ Id=11; Category="MIDIA";            Name="VLC Media Player";   WingetId="VideoLAN.VLC"                 }
+    [PSCustomObject]@{ Id=12; Category="MIDIA";            Name="MPC-HC";             WingetId="clsid2.mpc-hc"               }
+    [PSCustomObject]@{ Id=13; Category="MIDIA";            Name="Spotify";            WingetId="Spotify.Spotify"              }
+    # --- COMUNICACAO ---
+    [PSCustomObject]@{ Id=14; Category="COMUNICACAO";      Name="Discord";            WingetId="Discord.Discord"              }
+    [PSCustomObject]@{ Id=15; Category="COMUNICACAO";      Name="Telegram";           WingetId="Telegram.TelegramDesktop"     }
+    [PSCustomObject]@{ Id=16; Category="COMUNICACAO";      Name="Zoom";               WingetId="Zoom.Zoom"                    }
+    [PSCustomObject]@{ Id=17; Category="COMUNICACAO";      Name="WhatsApp";           WingetId="9NKSQGP7F2NH"                 }
+    # --- UTILITARIOS ---
+    [PSCustomObject]@{ Id=18; Category="UTILITARIOS";      Name="Notepad++";          WingetId="Notepad++.Notepad++"          }
+    [PSCustomObject]@{ Id=19; Category="UTILITARIOS";      Name="Everything (busca)"; WingetId="voidtools.Everything"         }
+    [PSCustomObject]@{ Id=20; Category="UTILITARIOS";      Name="PowerToys";          WingetId="Microsoft.PowerToys"          }
+    [PSCustomObject]@{ Id=21; Category="UTILITARIOS";      Name="CPU-Z";              WingetId="CPUID.CPU-Z"                  }
+    [PSCustomObject]@{ Id=22; Category="UTILITARIOS";      Name="TreeSize Free";      WingetId="JAMSoftware.TreeSize.Free"    }
+)
+
+# Exibe o menu de selecao de programas por categoria
+function Show-ProgramSelectionMenu {
+    param([System.Collections.Generic.HashSet[int]]$Selected)
+
+    Show-Header
+    Write-Host ""
+    Write-Host "  PROGRAMAS ESSENCIAIS  -  Selecione o que deseja instalar" -ForegroundColor Cyan
+    Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "  Digite o numero para (marcar/desmarcar) | [A] Todos | [D] Limpar | [I] Instalar | [0] Voltar" -ForegroundColor DarkGray
+    Write-Host ""
+
+    $currentCategory = ""
+    foreach ($prog in $Script:ProgramCatalog) {
+        # Cabecalho de categoria
+        if ($prog.Category -ne $currentCategory) {
+            $currentCategory = $prog.Category
+            Write-Host "    --- $currentCategory ---" -ForegroundColor Magenta
+        }
+
+        $isSelected = $Selected.Contains($prog.Id)
+        $checkbox   = if ($isSelected) { "[X]" } else { "[ ]" }
+        $color      = if ($isSelected) { "Green" } else { "White" }
+        $idPadded   = $prog.Id.ToString().PadLeft(2)
+
+        Write-Host "    $checkbox " -NoNewline -ForegroundColor $color
+        Write-Host "($idPadded)" -NoNewline -ForegroundColor DarkGray
+        Write-Host " $($prog.Name)" -ForegroundColor $color
+    }
+
+    Write-Host ""
+    Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
+
+    $selCount = $Selected.Count
+    if ($selCount -gt 0) {
+        Write-Host "  $selCount programa(s) selecionado(s). Digite [I] para instalar." -ForegroundColor Yellow
+    } else {
+        Write-Host "  Nenhum programa selecionado." -ForegroundColor DarkGray
+    }
+    Write-Host ""
+}
+
+# ============================================================
+#  OPCAO [1] - PROGRAMAS ESSENCIAIS (menu interativo)
 # ============================================================
 function Install-EssentialPrograms {
-    Show-Section "PROGRAMAS ESSENCIAIS"
+    $selected = [System.Collections.Generic.HashSet[int]]::new()
 
-    Write-Host "  Iniciando instalacao dos programas essenciais..." -ForegroundColor White
-    Write-Host ""
+    while ($true) {
+        Show-ProgramSelectionMenu -Selected $selected
+        $input = (Read-Host "  Opcao").Trim().ToUpper()
 
-    Install-WithWinget -PackageId "Google.Chrome"        -PackageName "Google Chrome"
-    Install-WithWinget -PackageId "7zip.7zip"            -PackageName "7-Zip"
-    Install-WithWinget -PackageId "VideoLAN.VLC"         -PackageName "VLC Media Player"
-    Install-WithWinget -PackageId "Foxit.FoxitReader"    -PackageName "Foxit PDF Reader"
+        switch ($input) {
+            "0" { return }   # Voltar ao menu principal
 
-    Write-Host ""
-    Write-Host "  [CONCLUIDO] Instalacao de programas essenciais finalizada!" -ForegroundColor Green
+            "A" {
+                # Seleciona todos
+                foreach ($p in $Script:ProgramCatalog) { $null = $selected.Add($p.Id) }
+            }
+
+            "D" {
+                # Desmarca todos
+                $selected.Clear()
+            }
+
+            "I" {
+                # Instalar selecionados
+                if ($selected.Count -eq 0) {
+                    Write-Host "  [!] Nenhum programa selecionado!" -ForegroundColor Red
+                    Start-Sleep -Seconds 2
+                    continue
+                }
+
+                # Tela de instalacao
+                Show-Header
+                Write-Host ""
+                Write-Host "  INSTALANDO PROGRAMAS SELECIONADOS" -ForegroundColor Cyan
+                Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
+                Write-Host ""
+
+                $toInstall = $Script:ProgramCatalog | Where-Object { $selected.Contains($_.Id) }
+                $total     = $toInstall.Count
+                $current   = 0
+
+                foreach ($prog in $toInstall) {
+                    $current++
+                    Write-Host "  [$current/$total] " -NoNewline -ForegroundColor DarkGray
+                    Install-WithProgress -PackageId $prog.WingetId -PackageName $prog.Name
+                }
+
+                Write-Host ""
+                Write-Host "  ============================================================" -ForegroundColor Cyan
+                Write-Host "  [CONCLUIDO] $total programa(s) processado(s)!" -ForegroundColor Green
+                Write-Host "  ============================================================" -ForegroundColor Cyan
+                Write-Host ""
+                Write-Host "  Pressione qualquer tecla para voltar a selecao..." -ForegroundColor DarkGray
+                $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
+                # Limpa selecao e volta para a tela de selecao
+                $selected.Clear()
+            }
+
+            default {
+                # Tenta interpretar como numero para toggle
+                $num = 0
+                if ([int]::TryParse($input, [ref]$num)) {
+                    $exists = $Script:ProgramCatalog | Where-Object { $_.Id -eq $num }
+                    if ($exists) {
+                        if ($selected.Contains($num)) {
+                            $null = $selected.Remove($num)
+                        } else {
+                            $null = $selected.Add($num)
+                        }
+                    } else {
+                        Write-Host "  [!] Numero invalido: $num" -ForegroundColor Red
+                        Start-Sleep -Seconds 1
+                    }
+                } else {
+                    Write-Host "  [!] Comando nao reconhecido." -ForegroundColor Red
+                    Start-Sleep -Seconds 1
+                }
+            }
+        }
+    }
 }
 
 # ============================================================
@@ -559,7 +758,7 @@ function Start-MainMenu {
         $choice = Read-Host "  Digite o numero da opcao desejada"
 
         switch ($choice.Trim()) {
-            "1"  { Install-EssentialPrograms;   Pause-AndReturn }
+            "1"  { Install-EssentialPrograms }
             "2"  { Update-DriversWindowsUpdate; Pause-AndReturn }
             "3"  { Install-DriverBooster;        Pause-AndReturn }
             "4"  { Install-ProfileBasic;         Pause-AndReturn }
