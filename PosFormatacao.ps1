@@ -865,6 +865,7 @@ function Uninstall-AnyProgram {
                         Publisher            = $reg.Publisher
                         InstallDate          = $instLabel
                         LastUsed             = $lastLabel
+                        InstallLocation      = $reg.InstallLocation
                         UninstallString      = $reg.UninstallString
                         QuietUninstallString = $reg.QuietUninstallString
                     }
@@ -920,11 +921,28 @@ function Uninstall-AnyProgram {
         }
 
         Write-Host ""
-        Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
-        Write-Host "  Pagina $($Page+1)/$totalPages  |  $($Apps.Count) programa(s) encontrado(s)" -ForegroundColor DarkGray
+
+        # ---- Barra de navegacao colorida ----
+        $pg = "  Pagina $($Page+1)/$totalPages"
+        $ct = "$($Apps.Count) programa(s)"
+        Write-Host "$pg" -NoNewline -ForegroundColor DarkGray
+        Write-Host "  |  " -NoNewline -ForegroundColor DarkGray
+        Write-Host $ct -ForegroundColor White
         Write-Host ""
-        Write-Host "  Digite: numero p/ selecionar  |  [F] Filtrar  |  [L] Limpar filtro" -ForegroundColor DarkGray
-        Write-Host "          [N] Proxima pag.      |  [P] Pag. anterior  |  [0] Voltar" -ForegroundColor DarkGray
+        Write-Host "  " -NoNewline
+        Write-Host " NUM " -NoNewline -BackgroundColor DarkCyan    -ForegroundColor Black
+        Write-Host " Selecionar   " -NoNewline -ForegroundColor Cyan
+        Write-Host " F " -NoNewline -BackgroundColor DarkYellow  -ForegroundColor Black
+        Write-Host " Filtrar   " -NoNewline -ForegroundColor Yellow
+        Write-Host " L " -NoNewline -BackgroundColor DarkGreen   -ForegroundColor Black
+        Write-Host " Limpar filtro" -ForegroundColor Green
+        Write-Host "  " -NoNewline
+        Write-Host " N " -NoNewline -BackgroundColor DarkMagenta -ForegroundColor White
+        Write-Host " Proxima pag  " -NoNewline -ForegroundColor Magenta
+        Write-Host " P " -NoNewline -BackgroundColor DarkMagenta -ForegroundColor White
+        Write-Host " Pag anterior " -NoNewline -ForegroundColor Magenta
+        Write-Host " 0 " -NoNewline -BackgroundColor DarkRed     -ForegroundColor White
+        Write-Host " Voltar" -ForegroundColor Red
         Write-Host ""
     }
 
@@ -1023,6 +1041,17 @@ function Uninstall-AnyProgram {
                     Write-Host $verLabel -ForegroundColor DarkGray
                     Write-Host "  Editor   : " -NoNewline -ForegroundColor White
                     Write-Host $pubLabel -ForegroundColor DarkGray
+                    # --- Local de instalacao ---
+                    $locLabel = if ($chosen.InstallLocation -and (Test-Path $chosen.InstallLocation)) {
+                        $chosen.InstallLocation
+                    } elseif ($chosen.InstallLocation) {
+                        $chosen.InstallLocation
+                    } else {
+                        'nao identificado'
+                    }
+                    Write-Host "  Local    : " -NoNewline -ForegroundColor White
+                    Write-Host $locLabel -ForegroundColor DarkGray
+
                     Write-Host "  Instalado: " -NoNewline -ForegroundColor White
                     if ($chosen.InstallDate -ne '--/--/----') {
                         Write-Host $chosen.InstallDate -ForegroundColor Yellow
@@ -1035,16 +1064,33 @@ function Uninstall-AnyProgram {
                     } else {
                         Write-Host 'sem registro de uso' -ForegroundColor DarkGray
                     }
-                    Write-Host ""
-                    Write-Host "  [!] Isso ira desinstalar o programa E remover arquivos residuais." -ForegroundColor Red
-                    Write-Host ""
-                    $confirm = (Read-Host '  Confirma? [S para SIM / qualquer tecla para cancelar]').Trim().ToUpper()
 
-                    if ($confirm -ne 'S') {
+                    # ---- Opcoes de remocao ----
+                    Write-Host ""
+                    Write-Host "  " -NoNewline
+                    Write-Host " 1 " -NoNewline -BackgroundColor DarkYellow -ForegroundColor Black
+                    Write-Host "  Remover somente o programa" -ForegroundColor Yellow
+                    Write-Host "  " -NoNewline
+                    Write-Host " 2 " -NoNewline -BackgroundColor DarkRed    -ForegroundColor White
+                    Write-Host "  Remover programa + limpar todos os arquivos residuais" -ForegroundColor Red
+                    Write-Host "  " -NoNewline
+                    Write-Host " 0 " -NoNewline -BackgroundColor DarkGray   -ForegroundColor White
+                    Write-Host "  Cancelar" -ForegroundColor DarkGray
+                    Write-Host ""
+
+                    $confirmOpt = (Read-Host '  Escolha').Trim()
+
+                    if ($confirmOpt -eq '0' -or $confirmOpt -eq '') {
                         Write-Host "  Operacao cancelada." -ForegroundColor DarkGray
                         Start-Sleep -Seconds 1
                         continue
                     }
+                    if ($confirmOpt -ne '1' -and $confirmOpt -ne '2') {
+                        Write-Host "  [!] Opcao invalida." -ForegroundColor Red
+                        Start-Sleep -Seconds 1
+                        continue
+                    }
+                    $doCleanup = ($confirmOpt -eq '2')
 
                     # --- Desinstalacao ---
                     Show-Header
@@ -1110,14 +1156,19 @@ function Uninstall-AnyProgram {
                         }
                     }
 
-                    # Passo 3: Limpeza de arquivos residuais
-                    Write-Host ""
-                    Write-Host "  [3/3] Limpando arquivos residuais..." -ForegroundColor White
-                    $removed = Remove-Leftovers -AppName $chosen.DisplayName
-                    if ($removed -gt 0) {
-                        Write-Host "  [OK] $removed pasta(s) residual(is) removida(s)." -ForegroundColor Green
+                    # Passo 3: Limpeza de arquivos residuais (apenas se opcao 2 for escolhida)
+                    if ($doCleanup) {
+                        Write-Host ""
+                        Write-Host "  [3/3] Limpando arquivos residuais..." -ForegroundColor White
+                        $removed = Remove-Leftovers -AppName $chosen.DisplayName
+                        if ($removed -gt 0) {
+                            Write-Host "  [OK] $removed pasta(s) residual(is) removida(s)." -ForegroundColor Green
+                        } else {
+                            Write-Host "  [OK] Nenhum arquivo residual encontrado." -ForegroundColor DarkGray
+                        }
                     } else {
-                        Write-Host "  [OK] Nenhum arquivo residual encontrado." -ForegroundColor DarkGray
+                        Write-Host ""
+                        Write-Host "  [INFO] Limpeza de arquivos residuais ignorada a pedido." -ForegroundColor DarkGray
                     }
 
                     Write-Host ""
