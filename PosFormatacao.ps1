@@ -76,6 +76,7 @@ function Show-Menu {
     Write-Host "    [8]  Debloat (Remover Apps Nativos e Bloatware)" -ForegroundColor White
     Write-Host "    [9]  Otimizacao de Rede (DNS Cloudflare + Flush DNS)" -ForegroundColor White
     Write-Host "    [10] Extras (Menu Classico Win11, Extensoes/Ocultos)" -ForegroundColor White
+    Write-Host "    [11] Desinstalar Programas (busca + remove arquivos residuais)" -ForegroundColor White
     Write-Host ""
     Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
     Write-Host "    [88] Visitar GitHub (https://glaycon.github.io)" -ForegroundColor Green
@@ -796,6 +797,271 @@ function Apply-Extras {
 }
 
 # ============================================================
+#  OPCAO [11] - DESINSTALAR PROGRAMAS
+# ============================================================
+function Uninstall-AnyProgram {
+
+    # Coleta todos os programas instalados via registro (muito mais rapido que winget list)
+    function Get-InstalledApps {
+        $paths = @(
+            'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+            'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+            'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        )
+        $apps = foreach ($path in $paths) {
+            Get-ItemProperty $path -ErrorAction SilentlyContinue |
+                Where-Object { $_.DisplayName -and $_.DisplayName.Trim() -ne '' } |
+                Select-Object DisplayName, DisplayVersion, Publisher,
+                              UninstallString, QuietUninstallString,
+                              @{N='WingetId'; E={ $null }}
+        }
+        # Remove duplicatas pelo nome
+        $apps | Sort-Object DisplayName -Unique
+    }
+
+    # Desenha a tabela de resultados
+    function Show-AppList {
+        param(
+            [array]$Apps,
+            [string]$Filter,
+            [int]$Page,
+            [int]$PageSize
+        )
+        Show-Header
+        Write-Host ""
+        Write-Host "  DESINSTALAR PROGRAMAS" -ForegroundColor Red
+        Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
+        Write-Host "  Filtro atual: " -NoNewline -ForegroundColor DarkGray
+        if ($Filter) {
+            Write-Host "'$Filter'" -ForegroundColor Yellow
+        } else {
+            Write-Host "(todos os programas)" -ForegroundColor DarkGray
+        }
+        Write-Host ""
+
+        $totalPages = [math]::Ceiling($Apps.Count / $PageSize)
+        $start = $Page * $PageSize
+        $slice = $Apps | Select-Object -Skip $start -First $PageSize
+
+        $idx = $start + 1
+        foreach ($app in $slice) {
+            $numLabel = "[$idx]".PadRight(5)
+            $ver      = if ($app.DisplayVersion) { "v$($app.DisplayVersion)" } else { '' }
+            Write-Host "  $numLabel " -NoNewline -ForegroundColor Cyan
+            Write-Host $app.DisplayName.PadRight(42).Substring(0, [math]::Min(42, $app.DisplayName.Length)).PadRight(42) -NoNewline -ForegroundColor White
+            Write-Host " $ver" -ForegroundColor DarkGray
+            $idx++
+        }
+
+        Write-Host ""
+        Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
+        Write-Host "  Pagina $($Page+1)/$totalPages  |  $($Apps.Count) programa(s) encontrado(s)" -ForegroundColor DarkGray
+        Write-Host ""
+        Write-Host "  Digite: numero p/ selecionar  |  [F] Filtrar  |  [L] Limpar filtro" -ForegroundColor DarkGray
+        Write-Host "          [N] Proxima pag.      |  [P] Pag. anterior  |  [0] Voltar" -ForegroundColor DarkGray
+        Write-Host ""
+    }
+
+    # Remove pastas residuais do app nos locais mais comuns
+    function Remove-Leftovers {
+        param([string]$AppName)
+
+        # Tira caracteres invalidos do nome para usar como nome de pasta
+        $safeName = ($AppName -replace '[^\w\s]', '').Trim()
+        $words    = ($safeName -split '\s+') | Where-Object { $_.Length -gt 3 }
+
+        $baseDirs = @(
+            $env:APPDATA
+            $env:LOCALAPPDATA
+            $env:ProgramFiles
+            ${env:ProgramFiles(x86)}
+            $env:ProgramData
+            (Join-Path $env:LOCALAPPDATA 'Programs')
+        ) | Where-Object { $_ -and (Test-Path $_) }
+
+        $removed = 0
+        foreach ($base in $baseDirs) {
+            # Tenta o nome completo e as primeiras palavras
+            foreach ($name in (@($safeName) + $words)) {
+                $target = Join-Path $base $name
+                if (Test-Path $target) {
+                    try {
+                        Remove-Item $target -Recurse -Force -ErrorAction Stop
+                        Write-Host "  [LIMPO] $target" -ForegroundColor DarkYellow
+                        $removed++
+                    } catch {
+                        Write-Host "  [SKIP]  $target (em uso ou sem permissao)" -ForegroundColor DarkGray
+                    }
+                }
+            }
+        }
+        return $removed
+    }
+
+    # ---- Estado do loop ----
+    $filter   = ''
+    $page     = 0
+    $pageSize = 15
+    $allApps  = @()
+
+    Write-Host ""
+    Write-Host "  Carregando lista de programas instalados..." -ForegroundColor DarkGray
+    $allApps = @(Get-InstalledApps)
+
+    while ($true) {
+        # Aplica filtro
+        $filtered = if ($filter) {
+            @($allApps | Where-Object { $_.DisplayName -match [regex]::Escape($filter) })
+        } else {
+            $allApps
+        }
+
+        $totalPages = [math]::Max(1, [math]::Ceiling($filtered.Count / $pageSize))
+        if ($page -ge $totalPages) { $page = $totalPages - 1 }
+
+        Show-AppList -Apps $filtered -Filter $filter -Page $page -PageSize $pageSize
+
+        $input = (Read-Host '  Opcao').Trim().ToUpper()
+
+        switch ($input) {
+            '0' { return }
+
+            'F' {
+                Write-Host '  Digite parte do nome para filtrar: ' -NoNewline -ForegroundColor Yellow
+                $filter = (Read-Host '').Trim()
+                $page   = 0
+            }
+
+            'L' { $filter = ''; $page = 0 }
+
+            'N' { if ($page -lt $totalPages - 1) { $page++ } }
+
+            'P' { if ($page -gt 0) { $page-- } }
+
+            default {
+                $num = 0
+                if ([int]::TryParse($input, [ref]$num) -and $num -ge 1 -and $num -le $filtered.Count) {
+                    $chosen = $filtered[$num - 1]
+
+                    # --- Tela de confirmacao ---
+                    Show-Header
+                    Write-Host ""
+                    Write-Host "  CONFIRMAR DESINSTALACAO" -ForegroundColor Red
+                    Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
+                    Write-Host ""
+                    Write-Host "  Programa : " -NoNewline -ForegroundColor White
+                    Write-Host $chosen.DisplayName -ForegroundColor Yellow
+                    Write-Host "  Versao   : " -NoNewline -ForegroundColor White
+                    Write-Host (if ($chosen.DisplayVersion) { $chosen.DisplayVersion } else { 'desconhecida' }) -ForegroundColor DarkGray
+                    Write-Host "  Editor   : " -NoNewline -ForegroundColor White
+                    Write-Host (if ($chosen.Publisher) { $chosen.Publisher } else { 'desconhecido' }) -ForegroundColor DarkGray
+                    Write-Host ""
+                    Write-Host "  [!] Isso ira desinstalar o programa E remover arquivos residuais." -ForegroundColor Red
+                    Write-Host ""
+                    $confirm = (Read-Host '  Confirma? [S para SIM / qualquer tecla para cancelar]').Trim().ToUpper()
+
+                    if ($confirm -ne 'S') {
+                        Write-Host "  Operacao cancelada." -ForegroundColor DarkGray
+                        Start-Sleep -Seconds 1
+                        continue
+                    }
+
+                    # --- Desinstalacao ---
+                    Show-Header
+                    Write-Host ""
+                    Write-Host "  DESINSTALANDO: $($chosen.DisplayName)" -ForegroundColor Red
+                    Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
+                    Write-Host ""
+
+                    $uninstallOk = $false
+
+                    # Tentativa 1: winget uninstall (mais limpo)
+                    Write-Host "  [1/3] Tentando desinstalar via winget..." -ForegroundColor White
+                    $wingetProc = Start-Process winget -ArgumentList (
+                        "uninstall --name `"$($chosen.DisplayName)`" " +
+                        "--silent --accept-source-agreements --purge --force"
+                    ) -PassThru -WindowStyle Hidden -ErrorAction SilentlyContinue
+
+                    if ($wingetProc) {
+                        # Barra de progresso durante desinstalacao
+                        $bar30 = [string]::new([char]0x2591, 30)
+                        $filled = [char]0x2588
+                        $empty  = [char]0x2591
+                        $sp = @('|','/','-','\')
+                        $si = 0; $pct = 0
+                        while (-not $wingetProc.HasExited -and $pct -lt 98) {
+                            $pct = [math]::Min($pct + (Get-Random -Min 1 -Max 3), 98)
+                            $fc  = [math]::Round($pct / 100 * 30)
+                            $barStr = [string]::new($filled,$fc) + [string]::new($empty,(30-$fc))
+                            Write-Host "`r  $($sp[$si%4]) [" -NoNewline -ForegroundColor DarkGray
+                            Write-Host $barStr -NoNewline -ForegroundColor Red
+                            Write-Host "] $($pct.ToString().PadLeft(3))%  Desinstalando..." -NoNewline -ForegroundColor White
+                            Start-Sleep -Milliseconds 120
+                            $si++
+                        }
+                        $wingetProc.WaitForExit()
+                        $fullBar = [string]::new($filled, 30)
+                        Write-Host "`r  $([char]0x2714) [" -NoNewline -ForegroundColor DarkGray
+                        Write-Host $fullBar -NoNewline -ForegroundColor Green
+                        Write-Host "] 100%  Desinstalado!          " -ForegroundColor Green
+                        $uninstallOk = ($wingetProc.ExitCode -eq 0)
+                    }
+
+                    # Tentativa 2: UninstallString nativo (fallback)
+                    if (-not $uninstallOk) {
+                        Write-Host ""
+                        Write-Host "  [2/3] Tentando via desinstalador nativo..." -ForegroundColor White
+                        $uStr = if ($chosen.QuietUninstallString) { $chosen.QuietUninstallString } else { $chosen.UninstallString }
+                        if ($uStr) {
+                            try {
+                                if ($uStr -match '^msiexec') {
+                                    $msiArgs = ($uStr -replace 'msiexec.exe','').Trim() + ' /quiet /norestart'
+                                    Start-Process msiexec -ArgumentList $msiArgs -Wait -WindowStyle Hidden
+                                } else {
+                                    Start-Process cmd -ArgumentList "/c `"$uStr`"" -Wait -WindowStyle Hidden
+                                }
+                                Write-Host "  [OK] Desinstalador nativo executado." -ForegroundColor Green
+                                $uninstallOk = $true
+                            } catch {
+                                Write-Host "  [AVISO] Nao foi possivel executar o desinstalador nativo." -ForegroundColor DarkYellow
+                            }
+                        } else {
+                            Write-Host "  [AVISO] Nenhum desinstalador encontrado no registro." -ForegroundColor DarkYellow
+                        }
+                    }
+
+                    # Passo 3: Limpeza de arquivos residuais
+                    Write-Host ""
+                    Write-Host "  [3/3] Limpando arquivos residuais..." -ForegroundColor White
+                    $removed = Remove-Leftovers -AppName $chosen.DisplayName
+                    if ($removed -gt 0) {
+                        Write-Host "  [OK] $removed pasta(s) residual(is) removida(s)." -ForegroundColor Green
+                    } else {
+                        Write-Host "  [OK] Nenhum arquivo residual encontrado." -ForegroundColor DarkGray
+                    }
+
+                    Write-Host ""
+                    Write-Host "  ============================================================" -ForegroundColor Cyan
+                    Write-Host "  [CONCLUIDO] $($chosen.DisplayName) removido!" -ForegroundColor Green
+                    Write-Host "  ============================================================" -ForegroundColor Cyan
+                    Write-Host ""
+                    Write-Host "  Pressione qualquer tecla para voltar a lista..." -ForegroundColor DarkGray
+                    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+
+                    # Recarrega a lista (app foi removido)
+                    Write-Host "  Atualizando lista..." -ForegroundColor DarkGray
+                    $allApps = @(Get-InstalledApps)
+
+                } else {
+                    Write-Host "  [!] Numero invalido." -ForegroundColor Red
+                    Start-Sleep -Seconds 1
+                }
+            }
+        }
+    }
+}
+
+# ============================================================
 #  OPCAO [88] - ABRIR GITHUB
 # ============================================================
 function Open-GitHub {
@@ -829,6 +1095,7 @@ function Start-MainMenu {
             "8"  { Remove-Bloatware;             Pause-AndReturn }
             "9"  { Optimize-Network;             Pause-AndReturn }
             "10" { Apply-Extras;                 Pause-AndReturn }
+            "11" { Uninstall-AnyProgram }
             "88" { Open-GitHub;                  Pause-AndReturn }
             "0"  {
                 Show-Header
