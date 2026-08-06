@@ -126,12 +126,25 @@ function Install-WithProgress {
         [string]$PackageName
     )
 
-    $barLen   = 32
-    $spinners = [char[]]@(0x2596, 0x2598, 0x259D, 0x2597)  # blocos unicode
-    $alt      = @('|', '/', '-', '\')                        # fallback ASCII
-    $i        = 0
+    # --- Configuracoes visuais ---
+    $barLen  = 30                                   # largura da barra em caracteres
+    $filled  = [char]0x2588                         # bloco cheio  █
+    $empty   = [char]0x2591                         # bloco vazio  ░
+    $spinner = @([char]0x280B, [char]0x2819,        # spinner braille:
+                 [char]0x2839, [char]0x2838,        #  ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
+                 [char]0x283C, [char]0x2834,
+                 [char]0x2826, [char]0x2827,
+                 [char]0x2807, [char]0x280F)
 
-    # Inicia winget em segundo plano (janela oculta)
+    # Fases com limiar de % e mensagem de status
+    $phases = @(
+        @{ Limit=12; Msg="Verificando pacote...  "; Speed=180 }
+        @{ Limit=45; Msg="Baixando arquivo...    "; Speed=110 }
+        @{ Limit=80; Msg="Instalando...          "; Speed=90  }
+        @{ Limit=98; Msg="Finalizando...         "; Speed=200 }
+    )
+
+    # --- Inicia o processo winget em segundo plano ---
     try {
         $proc = Start-Process winget -ArgumentList (
             "install --id $PackageId " +
@@ -140,41 +153,89 @@ function Install-WithProgress {
         ) -PassThru -WindowStyle Hidden -ErrorAction Stop
     }
     catch {
-        Write-Host "  [ERRO] Nao foi possivel iniciar o instalador de $PackageName" -ForegroundColor Red
+        Write-Host "  [ERRO] Nao foi possivel iniciar: $PackageName" -ForegroundColor Red
         return
     }
 
-    # Animacao enquanto o processo roda
-    while (-not $proc.HasExited) {
-        $spin    = $alt[$i % 4]
-        # Barra "bounce": preenchimento que vai e volta
-        $phase   = $i % ($barLen * 2)
-        $filled  = if ($phase -lt $barLen) { $phase } else { $barLen * 2 - $phase }
-        $bar     = [string]::new([char]0x2588, $filled) + [string]::new([char]0x2591, ($barLen - $filled))
+    # --- Cabecalho fixo do app ---
+    Write-Host "  Programa : $PackageName" -ForegroundColor White
+    Write-Host "  ID       : $PackageId"   -ForegroundColor DarkGray
+    Write-Host ""
 
+    $pct      = 0
+    $spinIdx  = 0
+    $phaseIdx = 0
+
+    # ---- Loop de animacao ----
+    while ($pct -lt 100) {
+
+        # Se o processo terminou, pula direto para 100%
+        if ($proc.HasExited -and $pct -ge 5) {
+            $pct = 100
+            break
+        }
+
+        # Determina a fase atual e o delay
+        $currentPhase = $phases[$phaseIdx]
+        if ($pct -ge $currentPhase.Limit -and $phaseIdx -lt ($phases.Count - 1)) {
+            $phaseIdx++
+            $currentPhase = $phases[$phaseIdx]
+        }
+
+        # Incremento aleatorio pequeno para parecer realista
+        $step = Get-Random -Minimum 1 -Maximum 4
+        # Desacelera perto dos limites de fase
+        if ($pct -ge ($currentPhase.Limit - 5)) { $step = 1 }
+        $pct = [math]::Min($pct + $step, $currentPhase.Limit)
+
+        # Monta a barra
+        $filledCount = [math]::Round(($pct / 100) * $barLen)
+        $emptyCount  = $barLen - $filledCount
+        $barStr      = ([string]::new($filled, $filledCount)) + ([string]::new($empty, $emptyCount))
+
+        # Cor da barra muda conforme progresso
+        $barColor = if ($pct -lt 40) { 'Cyan' } elseif ($pct -lt 75) { 'Yellow' } else { 'Green' }
+
+        $spin = $spinner[$spinIdx % $spinner.Count]
+        $pctLabel = "$pct%".PadLeft(4)
+
+        # Linha 1: spinner + barra + %
         Write-Host "`r  $spin [" -NoNewline -ForegroundColor DarkGray
-        Write-Host $bar -NoNewline -ForegroundColor Cyan
-        Write-Host "]  $PackageName " -NoNewline -ForegroundColor Yellow
-        Start-Sleep -Milliseconds 80
-        $i++
+        Write-Host $barStr      -NoNewline -ForegroundColor $barColor
+        Write-Host "] " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pctLabel    -NoNewline -ForegroundColor White
+        Write-Host "  $($currentPhase.Msg)" -NoNewline -ForegroundColor DarkGray
+
+        Start-Sleep -Milliseconds $currentPhase.Speed
+        $spinIdx++
     }
 
-    # Limpa a linha e mostra resultado final
-    $emptyLine = " " * ($barLen + $PackageName.Length + 20)
-    Write-Host "`r$emptyLine" -NoNewline
+    # --- Animacao final: enche a barra ate 100% suavemente se o processo ja saiu ---
+    if ($pct -lt 100) { $pct = 100 }
+    $fullBar = [string]::new($filled, $barLen)
 
-    if ($proc.ExitCode -eq 0 -or $proc.ExitCode -eq -1978335189) {
-        $okBar = [string]::new([char]0x2588, $barLen)
-        Write-Host "`r  [OK] [" -NoNewline -ForegroundColor DarkGray
-        Write-Host $okBar -NoNewline -ForegroundColor Green
-        Write-Host "]  $PackageName" -ForegroundColor Green
+    # Limpa a linha e exibe resultado final
+    $clearLine = " " * 80
+    Write-Host "`r$clearLine`r" -NoNewline
+
+    $success = ($proc.ExitCode -eq 0 -or $proc.ExitCode -eq -1978335189)
+
+    if ($success) {
+        Write-Host "  " -NoNewline
+        Write-Host [char]0x2714 -NoNewline -ForegroundColor Green      # checkmark ✔
+        Write-Host " [" -NoNewline -ForegroundColor DarkGray
+        Write-Host $fullBar -NoNewline -ForegroundColor Green
+        Write-Host "] 100%  Concluido!" -ForegroundColor Green
     }
     else {
-        $errBar = [string]::new([char]0x2591, $barLen)
-        Write-Host "`r  [!!] [" -NoNewline -ForegroundColor DarkGray
+        $errBar = [string]::new($empty, $barLen)
+        Write-Host "  " -NoNewline
+        Write-Host [char]0x2718 -NoNewline -ForegroundColor Red         # x ✘
+        Write-Host " [" -NoNewline -ForegroundColor DarkGray
         Write-Host $errBar -NoNewline -ForegroundColor Red
-        Write-Host "]  $PackageName (cod: $($proc.ExitCode))" -ForegroundColor Red
+        Write-Host "]  Falha! (cod: $($proc.ExitCode))" -ForegroundColor Red
     }
+    Write-Host ""
 }
 
 # Exibe uma secao com titulo formatado
