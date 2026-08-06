@@ -1,0 +1,17 @@
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# PowerShell
+*.pssproj.user
+*.suo
+.vs/
+
+# Logs
+*.log
+*.tmp
+
+# VSCode local settings
+.vscode/settings.json
