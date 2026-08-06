@@ -254,37 +254,55 @@ function Show-Section {
 # ============================================================
 $Script:ProgramCatalog = @(
     # --- NAVEGADORES ---
-    [PSCustomObject]@{ Id=1;  Category="NAVEGADORES";      Name="Google Chrome";      WingetId="Google.Chrome"                }
-    [PSCustomObject]@{ Id=2;  Category="NAVEGADORES";      Name="Mozilla Firefox";    WingetId="Mozilla.Firefox"              }
-    [PSCustomObject]@{ Id=3;  Category="NAVEGADORES";      Name="Brave Browser";      WingetId="Brave.Brave"                  }
-    [PSCustomObject]@{ Id=4;  Category="NAVEGADORES";      Name="Opera GX";           WingetId="Opera.OperaGX"                }
-    # --- PDF & LEITURA ---
-    [PSCustomObject]@{ Id=5;  Category="PDF & LEITURA";    Name="Foxit PDF Reader";   WingetId="Foxit.FoxitReader"            }
-    [PSCustomObject]@{ Id=6;  Category="PDF & LEITURA";    Name="Adobe Acrobat Rdr";  WingetId="Adobe.Acrobat.Reader.64-bit" }
-    [PSCustomObject]@{ Id=7;  Category="PDF & LEITURA";    Name="Sumatra PDF";        WingetId="SumatraPDF.SumatraPDF"       }
-    # --- COMPACTADORES ---
-    [PSCustomObject]@{ Id=8;  Category="COMPACTADORES";    Name="7-Zip";              WingetId="7zip.7zip"                    }
-    [PSCustomObject]@{ Id=9;  Category="COMPACTADORES";    Name="WinRAR";             WingetId="RARLab.WinRAR"                }
-    [PSCustomObject]@{ Id=10; Category="COMPACTADORES";    Name="PeaZip";             WingetId="Giorgiotani.Peazip"           }
-    # --- MIDIA ---
-    [PSCustomObject]@{ Id=11; Category="MIDIA";            Name="VLC Media Player";   WingetId="VideoLAN.VLC"                 }
-    [PSCustomObject]@{ Id=12; Category="MIDIA";            Name="MPC-HC";             WingetId="clsid2.mpc-hc"               }
-    [PSCustomObject]@{ Id=13; Category="MIDIA";            Name="Spotify";            WingetId="Spotify.Spotify"              }
-    # --- COMUNICACAO ---
-    [PSCustomObject]@{ Id=14; Category="COMUNICACAO";      Name="Discord";            WingetId="Discord.Discord"              }
-    [PSCustomObject]@{ Id=15; Category="COMUNICACAO";      Name="Telegram";           WingetId="Telegram.TelegramDesktop"     }
-    [PSCustomObject]@{ Id=16; Category="COMUNICACAO";      Name="Zoom";               WingetId="Zoom.Zoom"                    }
-    [PSCustomObject]@{ Id=17; Category="COMUNICACAO";      Name="WhatsApp";           WingetId="9NKSQGP7F2NH"                 }
-    # --- UTILITARIOS ---
-    [PSCustomObject]@{ Id=18; Category="UTILITARIOS";      Name="Notepad++";          WingetId="Notepad++.Notepad++"          }
-    [PSCustomObject]@{ Id=19; Category="UTILITARIOS";      Name="Everything (busca)"; WingetId="voidtools.Everything"         }
-    [PSCustomObject]@{ Id=20; Category="UTILITARIOS";      Name="PowerToys";          WingetId="Microsoft.PowerToys"          }
-    [PSCustomObject]@{ Id=21; Category="UTILITARIOS";      Name="CPU-Z";              WingetId="CPUID.CPU-Z"                  }
-    [PSCustomObject]@{ Id=22; Category="UTILITARIOS";      Name="TreeSize Free";      WingetId="JAMSoftware.TreeSize.Free"    }
+    [PSCustomObject]@{ Id=1;  Category="NAVEGADORES";                    Name="Google Chrome";           WingetId="Google.Chrome" }
+    [PSCustomObject]@{ Id=2;  Category="NAVEGADORES";                    Name="Mozilla Firefox";         WingetId="Mozilla.Firefox" }
+    [PSCustomObject]@{ Id=3;  Category="NAVEGADORES";                    Name="Brave Browser";           WingetId="Brave.Brave" }
+    [PSCustomObject]@{ Id=4;  Category="NAVEGADORES";                    Name="Opera GX";                WingetId="Opera.OperaGX" }
+
+    # --- DOCUMENTOS & PDF ---
+    [PSCustomObject]@{ Id=5;  Category="DOCUMENTOS & PDF";               Name="Foxit PDF Reader";        WingetId="Foxit.FoxitReader" }
+    [PSCustomObject]@{ Id=6;  Category="DOCUMENTOS & PDF";               Name="Adobe Acrobat Reader";   WingetId="Adobe.Acrobat.Reader.64-bit" }
+    [PSCustomObject]@{ Id=7;  Category="DOCUMENTOS & PDF";               Name="Sumatra PDF (Leve)";      WingetId="SumatraPDF.SumatraPDF" }
+    [PSCustomObject]@{ Id=8;  Category="DOCUMENTOS & PDF";               Name="LibreOffice";             WingetId="TheDocumentFoundation.LibreOffice" }
+
+    # --- COMPACTADORES & TEXTO ---
+    [PSCustomObject]@{ Id=9;  Category="COMPACTADORES & TEXTO";          Name="7-Zip";                   WingetId="7zip.7zip" }
+    [PSCustomObject]@{ Id=10; Category="COMPACTADORES & TEXTO";          Name="WinRAR";                  WingetId="RARLab.WinRAR" }
+    [PSCustomObject]@{ Id=11; Category="COMPACTADORES & TEXTO";          Name="PeaZip";                  WingetId="Giorgiotani.Peazip" }
+    [PSCustomObject]@{ Id=12; Category="COMPACTADORES & TEXTO";          Name="Notepad++";               WingetId="Notepad++.Notepad++" }
+
+    # --- MIDIA & AUDIO ---
+    [PSCustomObject]@{ Id=13; Category="MIDIA & AUDIO";                  Name="VLC Media Player";        WingetId="VideoLAN.VLC" }
+    [PSCustomObject]@{ Id=14; Category="MIDIA & AUDIO";                  Name="MPC-HC (K-Lite)";         WingetId="clsid2.mpc-hc" }
+    [PSCustomObject]@{ Id=15; Category="MIDIA & AUDIO";                  Name="Spotify";                 WingetId="Spotify.Spotify" }
+    [PSCustomObject]@{ Id=16; Category="MIDIA & AUDIO";                  Name="OBS Studio (Gravacao)";   WingetId="OBSProject.OBSStudio" }
+
+    # --- COMUNICACAO & SUPORTE REMOTO ---
+    [PSCustomObject]@{ Id=17; Category="COMUNICACAO & SUPORTE REMOTO";   Name="WhatsApp";                WingetId="9NKSQGP7F2NH" }
+    [PSCustomObject]@{ Id=18; Category="COMUNICACAO & SUPORTE REMOTO";   Name="Telegram";                WingetId="Telegram.TelegramDesktop" }
+    [PSCustomObject]@{ Id=19; Category="COMUNICACAO & SUPORTE REMOTO";   Name="Discord";                 WingetId="Discord.Discord" }
+    [PSCustomObject]@{ Id=20; Category="COMUNICACAO & SUPORTE REMOTO";   Name="Zoom / Teams";            WingetId="Zoom.Zoom" }
+    [PSCustomObject]@{ Id=21; Category="COMUNICACAO & SUPORTE REMOTO";   Name="AnyDesk";                 WingetId="AnyDeskSoftwareGmbH.AnyDesk" }
+    [PSCustomObject]@{ Id=22; Category="COMUNICACAO & SUPORTE REMOTO";   Name="TeamViewer";              WingetId="TeamViewer.TeamViewer" }
+
+    # --- JOGOS & LAUNCHERS ---
+    [PSCustomObject]@{ Id=23; Category="JOGOS & LAUNCHERS";              Name="Steam";                   WingetId="Valve.Steam" }
+    [PSCustomObject]@{ Id=24; Category="JOGOS & LAUNCHERS";              Name="Epic Games Launcher";     WingetId="EpicGames.EpicGamesLauncher" }
+    [PSCustomObject]@{ Id=25; Category="JOGOS & LAUNCHERS";              Name="Xbox App (PC)";           WingetId="Microsoft.GamingApp" }
+    [PSCustomObject]@{ Id=26; Category="JOGOS & LAUNCHERS";              Name="EA App";                  WingetId="ElectronicArts.EADesktop" }
+
+    # --- DIAGNOSTICO & MANUTENCAO ---
+    [PSCustomObject]@{ Id=27; Category="DIAGNOSTICO & MANUTENCAO";       Name="Everything (Busca)";      WingetId="voidtools.Everything" }
+    [PSCustomObject]@{ Id=28; Category="DIAGNOSTICO & MANUTENCAO";       Name="PowerToys";               WingetId="Microsoft.PowerToys" }
+    [PSCustomObject]@{ Id=29; Category="DIAGNOSTICO & MANUTENCAO";       Name="CPU-Z";                   WingetId="CPUID.CPU-Z" }
+    [PSCustomObject]@{ Id=30; Category="DIAGNOSTICO & MANUTENCAO";       Name="GPU-Z";                   WingetId="TechPowerUp.GPU-Z" }
+    [PSCustomObject]@{ Id=31; Category="DIAGNOSTICO & MANUTENCAO";       Name="CrystalDiskInfo (SSD)";   WingetId="CrystalData.CrystalDiskInfo" }
+    [PSCustomObject]@{ Id=32; Category="DIAGNOSTICO & MANUTENCAO";       Name="TreeSize Free (Espaco)";  WingetId="JAMSoftware.TreeSize.Free" }
+    [PSCustomObject]@{ Id=33; Category="DIAGNOSTICO & MANUTENCAO";       Name="Revo Uninstaller";        WingetId="RevoUninstaller.RevoUninstaller" }
+    [PSCustomObject]@{ Id=34; Category="DIAGNOSTICO & MANUTENCAO";       Name="HWMonitor (Temps)";       WingetId="CPUID.HWMonitor" }
 )
 
-# Exibe o menu de selecao de programas por categoria
-# Exibe o menu de selecao de programas em 2 colunas com barra de acoes colorida
+# Exibe o menu de selecao de programas agrupados por categoria em 2 colunas
 function Show-ProgramSelectionMenu {
     param([System.Collections.Generic.HashSet[int]]$Selected)
 
@@ -292,41 +310,44 @@ function Show-ProgramSelectionMenu {
     Write-Host ""
     Write-Host "  PROGRAMAS ESSENCIAIS  -  Selecione os programas desejados" -ForegroundColor Cyan
     Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host ""
 
-    # Exibe a lista em 2 colunas lado a lado (11 linhas)
-    for ($i = 0; $i -lt $Script:ProgramCatalog.Count; $i += 2) {
-        $left  = $Script:ProgramCatalog[$i]
-        $right = if (($i + 1) -lt $Script:ProgramCatalog.Count) { $Script:ProgramCatalog[$i+1] } else { $null }
+    # Agrupa por categoria e exibe cada grupo em 2 colunas
+    $grouped = $Script:ProgramCatalog | Group-Object Category
+    foreach ($group in $grouped) {
+        Write-Host "  --- $($group.Name) ---" -ForegroundColor Magenta
+        $items = $group.Group
+        for ($i = 0; $i -lt $items.Count; $i += 2) {
+            $left  = $items[$i]
+            $right = if (($i + 1) -lt $items.Count) { $items[$i+1] } else { $null }
 
-        # --- COLUNA ESQUERDA ---
-        $isSelL = $Selected.Contains($left.Id)
-        $boxL   = if ($isSelL) { "[X]" } else { "[ ]" }
-        $colorL = if ($isSelL) { "Green" } else { "White" }
-        $idL    = $left.Id.ToString().PadLeft(2)
-        $nameL  = $left.Name.PadRight(22)
+            # --- COLUNA ESQUERDA ---
+            $isSelL = $Selected.Contains($left.Id)
+            $boxL   = if ($isSelL) { "[X]" } else { "[ ]" }
+            $colorL = if ($isSelL) { "Green" } else { "White" }
+            $idL    = $left.Id.ToString().PadLeft(2)
+            $nameL  = $left.Name.PadRight(25)
 
-        Write-Host "    $boxL " -NoNewline -ForegroundColor $colorL
-        Write-Host "($idL)"    -NoNewline -ForegroundColor DarkGray
-        Write-Host " $nameL"   -NoNewline -ForegroundColor $colorL
+            Write-Host "    $boxL " -NoNewline -ForegroundColor $colorL
+            Write-Host "($idL)"    -NoNewline -ForegroundColor DarkGray
+            Write-Host " $nameL"   -NoNewline -ForegroundColor $colorL
 
-        # --- COLUNA DIREITA ---
-        if ($right) {
-            $isSelR = $Selected.Contains($right.Id)
-            $boxR   = if ($isSelR) { "[X]" } else { "[ ]" }
-            $colorR = if ($isSelR) { "Green" } else { "White" }
-            $idR    = $right.Id.ToString().PadLeft(2)
-            $nameR  = $right.Name.PadRight(22)
+            # --- COLUNA DIREITA ---
+            if ($right) {
+                $isSelR = $Selected.Contains($right.Id)
+                $boxR   = if ($isSelR) { "[X]" } else { "[ ]" }
+                $colorR = if ($isSelR) { "Green" } else { "White" }
+                $idR    = $right.Id.ToString().PadLeft(2)
+                $nameR  = $right.Name.PadRight(25)
 
-            Write-Host "   $boxR " -NoNewline -ForegroundColor $colorR
-            Write-Host "($idR)"    -NoNewline -ForegroundColor DarkGray
-            Write-Host " $nameR"   -ForegroundColor $colorR
-        } else {
-            Write-Host ""
+                Write-Host "   $boxR " -NoNewline -ForegroundColor $colorR
+                Write-Host "($idR)"    -NoNewline -ForegroundColor DarkGray
+                Write-Host " $nameR"   -ForegroundColor $colorR
+            } else {
+                Write-Host ""
+            }
         }
     }
 
-    Write-Host ""
     Write-Host "  ----------------------------------------------------------------------" -ForegroundColor DarkGray
 
     $selCount = $Selected.Count
