@@ -3,7 +3,7 @@
 # Autor: Glaycon Oliveira | https://glaycon.github.io
 #
 # Como usar no PowerShell (como Administrador):
-#   irm is.gd/wforge | iex
+#   irm bit.ly/winforge | iex
 #
 # ou URL direta:
 #   irm https://raw.githubusercontent.com/glaycon/WinForge/main/install.ps1 | iex
