@@ -81,7 +81,6 @@ irm bit.ly/winforge | iex
 | :--- | :--- |
 | [`WinForge.ps1`](WinForge.ps1) | Script principal com todo o menu interativo e funções |
 | [`install.ps1`](install.ps1) | Launcher remoto responsável pelo comando em 1 linha |
-| [`TESTAR.bat`](TESTAR.bat) | Arquivo batch para testes locais com auto-elevação UAC |
 | [`README.md`](README.md) | Documentação oficial do projeto |
 
 ---

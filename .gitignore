@@ -15,3 +15,8 @@ $RECYCLE.BIN/
 
 # VSCode local settings
 .vscode/settings.json
+
+# Local Test Scripts
+run.bat
+TESTAR.bat
+*.bat
