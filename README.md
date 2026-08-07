@@ -1,9 +1,6 @@
 # 🛠️ WinForge
 
-<p align="center">
-  <b>Script Automático Pós-Formatação para Windows 10 & 11</b><br>
-  <i>Interface interativa no terminal, catálogo com 34 programas, desinstalador inteligente e otimizações de sistema.</i>
-</p>
+> 🚀 **A solução completa e definitiva para pós-formatação no Windows:** instale 34+ programas essenciais em lote, aplique perfis automatizados (Gamer, Dev, Home), desinstale softwares com limpeza profunda de resíduos e otimize seu sistema em poucos segundos.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 10/11">
