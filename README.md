@@ -1,38 +1,41 @@
 # 🛠️ WinForge
 
-> Script PowerShell interativo para pós-formatação e automação de computadores com Windows 10 e 11.
+<p align="center">
+  <b>Script Automático Pós-Formatação para Windows 10 & 11</b><br>
+  <i>Interface interativa no terminal, catálogo com 34 programas, desinstalador inteligente e otimizações de sistema.</i>
+</p>
 
-**Desenvolvido por [Glaycon Oliveira](https://glaycon.github.io)**
+<p align="center">
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 10/11">
+  <img src="https://img.shields.io/badge/PowerShell-5.1%2B-5391FE?style=for-the-badge&logo=powershell&logoColor=white" alt="PowerShell 5.1+">
+  <img src="https://img.shields.io/badge/Winget-Oficial-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Winget">
+  <img src="https://img.shields.io/badge/Licen%C3%A7a-MIT-green?style=for-the-badge" alt="MIT License">
+</p>
 
 ---
 
-## 🚀 Como Usar (Link Curto!)
+## ⚡ Execução Rápida (Copie e Cole)
 
-### Método 1 — PowerShell (Recomendado)
-Abra o **PowerShell como Administrador** e execute:
+Abra o **PowerShell como Administrador** e cole o comando abaixo:
 
 ```powershell
 irm bit.ly/winforge | iex
 ```
 
-### Método 2 — CMD como Administrador
-```cmd
-powershell -ExecutionPolicy Bypass -Command "irm bit.ly/winforge | iex"
-```
-
-### Método 3 — URL Direta do GitHub
-```powershell
-irm https://raw.githubusercontent.com/glaycon/WinForge/main/install.ps1 | iex
-```
+> 💡 **Dica:** No Prompt de Comando (CMD) como Administrador, você também pode executar:
+> ```cmd
+> powershell -ExecutionPolicy Bypass -Command "irm bit.ly/winforge | iex"
+> ```
 
 ---
 
-## 📋 Menu Principal do WinForge
+## 🖥️ Preview da Interface
 
 ```
 ======================================================================
                                WINFORGE
                  Desenvolvido por Glaycon Oliveira
+                    https://glaycon.github.io
 ======================================================================
 
   --- 1. PROGRAMAS & DRIVERS ---
@@ -61,33 +64,31 @@ irm https://raw.githubusercontent.com/glaycon/WinForge/main/install.ps1 | iex
 
 ---
 
-## ⚡ Recursos em Destaque
+## 🔥 Principais Recursos
 
-- **Catálogo de 34 Programas Essenciais:** Seleção interativa em 2 colunas organizadas por 7 categorias, com barra de progresso linear 0–100% animada.
-- **Desinstalador Inteligente:** Busca instantânea por nome, exibição da data de instalação e última vez usado (via Prefetch), com desinstalação silenciosa + limpeza completa de pastas residuais em `AppData`, `Program Files`, etc.
-- **Atalho Permanente:** Opção `[12]` que instala um ícone do **WinForge** diretamente na sua Área de Trabalho com permissões de Administrador ativadas automaticamente.
-- **Tweaks & Debloat:** Otimização de energia, remoção de bloatwares nativos (Xbox, Solitaire, Clima, Notícias), DNS Cloudflare (1.1.1.1) e restauração do menu clássico no Windows 11.
-
----
-
-## 📦 Estrutura do Repositório
-
-```
-WinForge/
-├── WinForge.ps1        # Script principal com menu interativo
-├── install.ps1         # Launcher remoto (irm is.gd/winforge | iex)
-├── TESTAR.bat          # Launcher local batch com auto-elevação UAC
-└── README.md           # Documentação oficial
-```
+- 📦 **34 Programas Essenciais:** Catálogo em 2 colunas organizadas por 7 categorias (Navegadores, PDF, Mídia, Comunicação, Jogos, Utilitários, etc.) com instalação via `winget` oficial.
+- 📊 **Progresso Linear Realista (0–100%):** Barra de carregamento com porcentagem contínua, status por fases e spinner animado.
+- 🗑️ **Desinstalador Inteligente:** Lista contínua de todos os apps instalados, busca por nome, exibição de data de instalação, última vez usado (via Prefetch) e limpeza profunda de arquivos residuais (`AppData`, `Program Files`, etc.).
+- 🚀 **Perfis Prontos:** Instalação em lote com 1 clique para perfil **Básico**, **Gamer** ou **Desenvolvedor**.
+- 🛠️ **Debloat & Tweaks:** Remoção de aplicativos nativos inúteis (bloatware), otimização de energia, DNS Cloudflare (1.1.1.1), limpeza de cache e ativação do menu clássico no Windows 11.
+- 📌 **Atalho Permanente:** Opção `[12]` para instalar o **WinForge** na Área de Trabalho com permissão de Administrador ativada automaticamente.
 
 ---
 
-## 📄 Licença
+## 📂 Estrutura do Repositório
 
-MIT License — sinta-se livre para usar, modificar e distribuir.
+| Arquivo | Descrição |
+| :--- | :--- |
+| [`WinForge.ps1`](WinForge.ps1) | Script principal com todo o menu interativo e funções |
+| [`install.ps1`](install.ps1) | Launcher remoto responsável pelo comando em 1 linha |
+| [`TESTAR.bat`](TESTAR.bat) | Arquivo batch para testes locais com auto-elevação UAC |
+| [`README.md`](README.md) | Documentação oficial do projeto |
 
 ---
 
-<p align="center">
-  Desenvolvido com ❤️ por <a href="https://glaycon.github.io">Glaycon Oliveira</a>
-</p>
+## 👨‍💻 Autor & Créditos
+
+Desenvolvido com dedicação por **[Glaycon Oliveira](https://glaycon.github.io)**.
+
+- 🌐 Website: [glaycon.github.io](https://glaycon.github.io)
+- 📜 Licença: [MIT License](LICENSE)

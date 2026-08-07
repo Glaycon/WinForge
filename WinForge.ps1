@@ -21,12 +21,16 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Forca o fundo do terminal para PRETO (Black)
+# Forca o fundo do terminal para PRETO absoluto
 try {
     $Host.UI.RawUI.BackgroundColor = "Black"
     $Host.UI.RawUI.ForegroundColor = "White"
+    [Console]::BackgroundColor = [System.ConsoleColor]::Black
+    [Console]::ForegroundColor = [System.ConsoleColor]::White
+    [Console]::Clear()
+} catch {
     Clear-Host
-} catch { }
+}
 
 # Ajusta o tamanho da janela do console para exibir o menu sem rolagem nem quebras
 try {
@@ -75,8 +79,12 @@ function Show-Header {
     try {
         $Host.UI.RawUI.BackgroundColor = "Black"
         $Host.UI.RawUI.ForegroundColor = "White"
-    } catch { }
-    Clear-Host
+        [Console]::BackgroundColor = [System.ConsoleColor]::Black
+        [Console]::ForegroundColor = [System.ConsoleColor]::White
+        [Console]::Clear()
+    } catch {
+        Clear-Host
+    }
     Write-Host ""
     Write-Host "  ======================================================================" -ForegroundColor Cyan
     Write-Host "                                 WINFORGE" -ForegroundColor Yellow
