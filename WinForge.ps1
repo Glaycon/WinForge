@@ -21,11 +21,18 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Forca o fundo do terminal para PRETO (Black)
+try {
+    $Host.UI.RawUI.BackgroundColor = "Black"
+    $Host.UI.RawUI.ForegroundColor = "White"
+    Clear-Host
+} catch { }
+
 # Ajusta o tamanho da janela do console para exibir o menu sem rolagem nem quebras
 try {
     if ($Host.Name -eq "ConsoleHost") {
         $rawUI = $Host.UI.RawUI
-        $rawUI.WindowTitle = "POS-FORMATACAO AUTOMATICA - Glaycon Oliveira"
+        $rawUI.WindowTitle = "WINFORGE - Glaycon Oliveira"
         $buf = $rawUI.BufferSize
         if ($buf.Width -lt 90)   { $buf.Width = 90 }
         if ($buf.Height -lt 300) { $buf.Height = 300 }
@@ -65,6 +72,10 @@ if (-not (Test-Administrator)) {
 
 # Exibe o cabecalho do menu
 function Show-Header {
+    try {
+        $Host.UI.RawUI.BackgroundColor = "Black"
+        $Host.UI.RawUI.ForegroundColor = "White"
+    } catch { }
     Clear-Host
     Write-Host ""
     Write-Host "  ======================================================================" -ForegroundColor Cyan

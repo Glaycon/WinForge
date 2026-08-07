@@ -12,6 +12,13 @@
 # Define a politica de execucao para a sessao atual
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
+# Forca fundo PRETO no console
+try {
+    $Host.UI.RawUI.BackgroundColor = "Black"
+    $Host.UI.RawUI.ForegroundColor = "White"
+    Clear-Host
+} catch { }
+
 # URL do script principal no GitHub (branch main)
 $ScriptUrl = "https://raw.githubusercontent.com/glaycon/WinForge/main/WinForge.ps1"
 
