@@ -10,10 +10,10 @@
 .LINK
     https://glaycon.github.io
 .VERSION
-    1.2.0
+    1.2.1
 #>
 
-$Script:WinForgeVersion = "v1.2.0"
+$Script:WinForgeVersion = "v1.2.1"
 
 # ============================================================
 #  CONFIGURACAO INICIAL
@@ -1156,8 +1156,8 @@ function Uninstall-AnyProgram {
 
             default {
                 $num = 0
-                if ([int]::TryParse($input, [ref]$num) -and $num -ge 1 -and $num -le $filtered.Count) {
-                    $chosen = $filtered[$num - 1]
+                if ([int]::TryParse($input, [ref]$num) -and $num -ge 1 -and $num -le $sorted.Count) {
+                    $chosen = $sorted[$num - 1]
 
                     # --- Tela de confirmacao ---
                     Show-Header
