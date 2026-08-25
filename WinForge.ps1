@@ -10,8 +10,10 @@
 .LINK
     https://glaycon.github.io
 .VERSION
-    1.0.0
+    1.2.0
 #>
+
+$Script:WinForgeVersion = "v1.2.0"
 
 # ============================================================
 #  CONFIGURACAO INICIAL
@@ -88,8 +90,9 @@ function Show-Header {
     Write-Host ""
     Write-Host "  ======================================================================" -ForegroundColor Cyan
     Write-Host "                                 WINFORGE" -ForegroundColor Yellow
-    Write-Host "                   Desenvolvido por Glaycon Oliveira" -ForegroundColor DarkYellow
+    Write-Host "                 Seu canivete suico para pos-formatacao!" -ForegroundColor DarkYellow
     Write-Host "                    https://glaycon.github.io" -ForegroundColor DarkCyan
+    Write-Host "                              $Script:WinForgeVersion" -ForegroundColor DarkGray
     Write-Host "  ======================================================================" -ForegroundColor Cyan
 }
 
