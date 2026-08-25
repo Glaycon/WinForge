@@ -65,7 +65,7 @@ irm bit.ly/winforge | iex
 
 - 📦 **34 Programas Essenciais:** Catálogo em 2 colunas organizadas por 7 categorias (Navegadores, PDF, Mídia, Comunicação, Jogos, Utilitários, etc.) com instalação via `winget` oficial.
 - 📊 **Progresso Linear Realista (0–100%):** Barra de carregamento com porcentagem contínua, status por fases e spinner animado.
-- 🗑️ **Desinstalador Inteligente:** Lista contínua de todos os apps instalados, busca por nome, exibição de data de instalação, última vez usado (via Prefetch) e limpeza profunda de arquivos residuais (`AppData`, `Program Files`, etc.).
+- 🗑️ **Desinstalador Inteligente:** Ordenação dinâmica por **Nome (A-Z)**, **Data de Instalação**, **Tamanho** e **Último Uso** (Prefetch), busca por nome e limpeza profunda de arquivos residuais (`AppData`, `Program Files`, etc.).
 - 🚀 **Perfis Prontos:** Instalação em lote com 1 clique para perfil **Básico**, **Gamer** ou **Desenvolvedor**.
 - 🛠️ **Debloat & Tweaks:** Remoção de aplicativos nativos inúteis (bloatware), otimização de energia, DNS Cloudflare (1.1.1.1), limpeza de cache e ativação do menu clássico no Windows 11.
 - 📌 **Atalho Permanente:** Opção `[12]` para instalar o **WinForge** na Área de Trabalho com permissão de Administrador ativada automaticamente.

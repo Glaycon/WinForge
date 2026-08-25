@@ -897,14 +897,11 @@ function Uninstall-AnyProgram {
     # Coleta todos os programas instalados via registro (muito mais rapido que winget list)
     function Get-InstalledApps {
         # --- Cache de Prefetch: monta hashtable nome_exe -> LastWriteTime ---
-        # Assim so percorre a pasta uma vez para todos os apps (rapido)
         $prefetchCache = @{}
         $pfDir = 'C:\Windows\Prefetch'
         if (Test-Path $pfDir) {
             Get-ChildItem $pfDir -Filter '*.pf' -ErrorAction SilentlyContinue | ForEach-Object {
-                # Nome do .pf: PROGRAMA-HASH.pf  -> pega so a parte do nome
                 $exeKey = ($_.Name -split '-')[0].ToUpper()
-                # Guarda o mais recente se houver multiplas entradas
                 if (-not $prefetchCache.ContainsKey($exeKey) -or
                     $_.LastWriteTime -gt $prefetchCache[$exeKey]) {
                     $prefetchCache[$exeKey] = $_.LastWriteTime
@@ -926,30 +923,51 @@ function Uninstall-AnyProgram {
 
                     # --- Data de instalacao (registro: formato YYYYMMDD) ---
                     $instLabel = '--/--/----'
+                    $instRaw   = [datetime]::MinValue
                     if ($reg.InstallDate -match '^\d{8}$') {
                         $d = $reg.InstallDate
                         $instLabel = "$($d.Substring(6,2))/$($d.Substring(4,2))/$($d.Substring(0,4))"
+                        try {
+                            $instRaw = [datetime]::ParseExact($reg.InstallDate, 'yyyyMMdd', $null)
+                        } catch { }
                     }
 
                     # --- Ultima vez usado (Prefetch) ---
-                    # Tenta extrair o nome do .exe a partir do icone ou local de instalacao
                     $lastLabel = '--/--/----'
+                    $lastRaw   = [datetime]::MinValue
                     $exeGuess  = ''
 
                     if ($reg.DisplayIcon) {
-                        # DisplayIcon pode ser  "C:\path\app.exe,0"  ou so o caminho
                         $iconPath = ($reg.DisplayIcon -split ',')[0].Trim('"')
                         $exeGuess = [System.IO.Path]::GetFileNameWithoutExtension($iconPath).ToUpper()
                     }
                     if (-not $exeGuess -and $reg.InstallLocation) {
-                        # Tenta o primeiro .exe da pasta de instalacao
                         $exe = Get-ChildItem $reg.InstallLocation -Filter '*.exe' `
                                -ErrorAction SilentlyContinue | Select-Object -First 1
                         if ($exe) { $exeGuess = $exe.BaseName.ToUpper() }
                     }
 
                     if ($exeGuess -and $prefetchCache.ContainsKey($exeGuess)) {
-                        $lastLabel = $prefetchCache[$exeGuess].ToString('dd/MM/yyyy')
+                        $dt = $prefetchCache[$exeGuess]
+                        $lastLabel = $dt.ToString('dd/MM/yyyy')
+                        $lastRaw   = $dt
+                    }
+
+                    # --- Tamanho Estimado (KB) ---
+                    $sizeKB = 0
+                    if ($reg.EstimatedSize) {
+                        try { $sizeKB = [long]$reg.EstimatedSize } catch { }
+                    }
+
+                    # Formata tamanho para exibicao
+                    $sizeLabel = if ($sizeKB -ge 1048576) {
+                        "{0:N1} GB" -f ($sizeKB / 1048576)
+                    } elseif ($sizeKB -ge 1024) {
+                        "{0:N0} MB" -f ($sizeKB / 1024)
+                    } elseif ($sizeKB -gt 0) {
+                        "{0:N0} KB" -f $sizeKB
+                    } else {
+                        '--'
                     }
 
                     [PSCustomObject]@{
@@ -957,7 +975,11 @@ function Uninstall-AnyProgram {
                         DisplayVersion       = $reg.DisplayVersion
                         Publisher            = $reg.Publisher
                         InstallDate          = $instLabel
+                        InstallDateRaw       = $instRaw
                         LastUsed             = $lastLabel
+                        LastUsedRaw          = $lastRaw
+                        EstimatedSizeKB      = $sizeKB
+                        SizeLabel            = $sizeLabel
                         InstallLocation      = $reg.InstallLocation
                         UninstallString      = $reg.UninstallString
                         QuietUninstallString = $reg.QuietUninstallString
@@ -965,42 +987,55 @@ function Uninstall-AnyProgram {
                 }
         }
 
-        # Remove duplicatas pelo nome, ordena
+        # Remove duplicatas pelo nome
         $apps | Sort-Object DisplayName -Unique
     }
 
-    # Desenha a tabela de resultados (exibe todos os programas sem paginacao)
+    # Desenha a tabela de resultados com ordenacao dinamica
     function Show-AppList {
         param(
             [array]$Apps,
-            [string]$Filter
+            [string]$Filter,
+            [string]$SortMode
         )
         Show-Header
         Write-Host ""
         Write-Host "  DESINSTALAR PROGRAMAS" -ForegroundColor Red
         Write-Host "  =======================================================================================" -ForegroundColor DarkGray
-        Write-Host "  Filtro atual: " -NoNewline -ForegroundColor DarkGray
+        Write-Host "  Filtro : " -NoNewline -ForegroundColor DarkGray
         if ($Filter) {
-            Write-Host "'$Filter'" -ForegroundColor Yellow
+            Write-Host "'$Filter'" -NoNewline -ForegroundColor Yellow
         } else {
-            Write-Host "(todos os programas)" -ForegroundColor DarkGray
+            Write-Host "(todos)" -NoNewline -ForegroundColor DarkGray
         }
+
+        $sortTitle = switch ($SortMode) {
+            'DATA'    { 'Data (Mais recentes)' }
+            'TAMANHO' { 'Tamanho (Maiores)' }
+            'USO'     { 'Ultimo Uso (Mais recentes)' }
+            default   { 'Nome (A-Z)' }
+        }
+        Write-Host "  |  Ordenacao: " -NoNewline -ForegroundColor DarkGray
+        Write-Host "[$sortTitle]" -ForegroundColor Cyan
         Write-Host ""
 
         $idx = 1
         foreach ($app in $Apps) {
             $numLabel  = "[$idx]".PadRight(5)
             $nameShort = $app.DisplayName
-            if ($nameShort.Length -gt 34) { $nameShort = $nameShort.Substring(0,31) + '...' }
-            $nameCol   = $nameShort.PadRight(34)
-            $ver       = if ($app.DisplayVersion) { $app.DisplayVersion.PadRight(12) } else { ''.PadRight(12) }
+            if ($nameShort.Length -gt 28) { $nameShort = $nameShort.Substring(0,25) + '...' }
+            $nameCol   = $nameShort.PadRight(28)
+            $ver       = if ($app.DisplayVersion) { $app.DisplayVersion.PadRight(10) } else { ''.PadRight(10) }
 
+            $sizeCol   = ("Tam: " + $app.SizeLabel).PadRight(12)
             $instColor = if ($app.InstallDate -ne '--/--/----') { 'Yellow' } else { 'DarkGray' }
             $useColor  = if ($app.LastUsed    -ne '--/--/----') { 'Cyan'   } else { 'DarkGray' }
 
             Write-Host "  $numLabel " -NoNewline -ForegroundColor Cyan
             Write-Host $nameCol     -NoNewline -ForegroundColor White
             Write-Host $ver         -NoNewline -ForegroundColor DarkGray
+            $sizeColor = if ($app.SizeLabel -ne '--') { 'Yellow' } else { 'DarkGray' }
+            Write-Host $sizeCol     -NoNewline -ForegroundColor $sizeColor
             Write-Host ' Inst:' -NoNewline -ForegroundColor DarkGray
             Write-Host $app.InstallDate -NoNewline -ForegroundColor $instColor
             Write-Host '  Uso:' -NoNewline -ForegroundColor DarkGray
@@ -1013,14 +1048,16 @@ function Uninstall-AnyProgram {
         Write-Host "  Total: $($Apps.Count) programa(s) encontrado(s)" -ForegroundColor White
         Write-Host ""
 
-        # ---- Barra de navegacao colorida (sem paginacao) ----
+        # ---- Barra de navegacao colorida (com opcao de ordenacao) ----
         Write-Host "  " -NoNewline
         Write-Host " NUM " -NoNewline -BackgroundColor DarkCyan    -ForegroundColor Black
         Write-Host " Selecionar  " -NoNewline -ForegroundColor Cyan
         Write-Host " F " -NoNewline -BackgroundColor DarkYellow  -ForegroundColor Black
-        Write-Host " Filtrar por nome  " -NoNewline -ForegroundColor Yellow
+        Write-Host " Filtrar  " -NoNewline -ForegroundColor Yellow
+        Write-Host " O " -NoNewline -BackgroundColor DarkMagenta -ForegroundColor White
+        Write-Host " Ordenar  " -NoNewline -ForegroundColor Magenta
         Write-Host " L " -NoNewline -BackgroundColor DarkGreen   -ForegroundColor Black
-        Write-Host " Limpar filtro  " -NoNewline -ForegroundColor Green
+        Write-Host " Limpar  " -NoNewline -ForegroundColor Green
         Write-Host " 0 " -NoNewline -BackgroundColor DarkRed     -ForegroundColor White
         Write-Host " Voltar ao Menu" -ForegroundColor Red
         Write-Host ""
@@ -1063,8 +1100,9 @@ function Uninstall-AnyProgram {
     }
 
     # ---- Estado do loop ----
-    $filter  = ''
-    $allApps = @()
+    $filter   = ''
+    $sortMode = 'NOME' # NOME | DATA | TAMANHO | USO
+    $allApps  = @()
 
     Write-Host ""
     Write-Host "  Carregando lista de programas instalados..." -ForegroundColor DarkGray
@@ -1078,7 +1116,15 @@ function Uninstall-AnyProgram {
             $allApps
         }
 
-        Show-AppList -Apps $filtered -Filter $filter
+        # Aplica ordenacao
+        $sorted = switch ($sortMode) {
+            'DATA'    { @($filtered | Sort-Object { $_.InstallDateRaw } -Descending) }
+            'TAMANHO' { @($filtered | Sort-Object { $_.EstimatedSizeKB } -Descending) }
+            'USO'     { @($filtered | Sort-Object { $_.LastUsedRaw } -Descending) }
+            default   { @($filtered | Sort-Object DisplayName) }
+        }
+
+        Show-AppList -Apps $sorted -Filter $filter -SortMode $sortMode
 
         $input = (Read-Host '  Opcao').Trim().ToUpper()
 
@@ -1090,7 +1136,20 @@ function Uninstall-AnyProgram {
                 $filter = (Read-Host '').Trim()
             }
 
-            'L' { $filter = '' }
+            'O' {
+                Write-Host ""
+                Write-Host "  Ordenar por: [1] Nome (A-Z) | [2] Data de Instalacao | [3] Tamanho | [4] Ultimo Uso" -ForegroundColor Magenta
+                $sOpt = (Read-Host '  Escolha o criterio (1-4)').Trim()
+                switch ($sOpt) {
+                    '1' { $sortMode = 'NOME' }
+                    '2' { $sortMode = 'DATA' }
+                    '3' { $sortMode = 'TAMANHO' }
+                    '4' { $sortMode = 'USO' }
+                    default { Write-Host "  Opcao invalida." -ForegroundColor Red; Start-Sleep -Seconds 1 }
+                }
+            }
+
+            'L' { $filter = ''; $sortMode = 'NOME' }
 
             default {
                 $num = 0
