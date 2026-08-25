@@ -23,8 +23,8 @@ try {
     Clear-Host
 }
 
-# URL do script principal no GitHub (branch main)
-$ScriptUrl = "https://raw.githubusercontent.com/glaycon/WinForge/main/WinForge.ps1"
+# URL do script principal no GitHub (branch main com cache-busting)
+$ScriptUrl = "https://raw.githubusercontent.com/glaycon/WinForge/main/WinForge.ps1?v=$(Get-Date -Format 'yyyyMMddHHmmss')"
 
 # Diretorio temporario de destino
 $TempDir    = "$env:TEMP\WinForge"
